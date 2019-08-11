@@ -12,6 +12,9 @@ datasets/
 # C extensions
 *.so
 
+# ipynb checkpoints
+.ipynb_checkpoints/
+
 # Distribution / packaging
 .Python
 build/

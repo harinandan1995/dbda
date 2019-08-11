@@ -1,8 +1,7 @@
 import tensorflow as tf
-from tensorflow.keras import layers
 
 
-class ConvBlock(layers.Layer):
+class ConvBlock(tf.keras.layers.Layer):
 
     def __init__(self, filters, kernel_size, strides, apply_batch_norm=True, apply_dropout=False):
 
@@ -13,14 +12,14 @@ class ConvBlock(layers.Layer):
         self.apply_batch_norm = apply_batch_norm
         self.apply_dropout = apply_dropout
 
-        self.conv_2d = layers.Conv2D(filters, kernel_size, strides, padding='same',
-                                     kernel_initializer= initializer, use_bias=False)
+        self.conv_2d = tf.keras.layers.Conv2D(filters, kernel_size, strides, padding='same',
+                                              kernel_initializer= initializer, use_bias=False)
 
-        self.batch_norm = layers.BatchNormalization()
-        self.dropout = layers.Dropout(0.5)
-        self.activation = layers.LeakyReLU()
+        self.batch_norm = tf.keras.layers.BatchNormalization()
+        self.dropout = tf.keras.layers.Dropout(0.5)
+        self.activation = tf.keras.layers.LeakyReLU()
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x = self.conv_2d(inputs)
 
@@ -32,8 +31,10 @@ class ConvBlock(layers.Layer):
 
         x = self.activation(x)
 
+        return x
 
-class ConvTransposeBlock(layers.Layer):
+
+class ConvTransposeBlock(tf.keras.layers.Layer):
 
     def __init__(self, filters, kernel_size, strides, apply_batch_norm=True, apply_dropout=False):
 
@@ -44,14 +45,14 @@ class ConvTransposeBlock(layers.Layer):
         self.apply_batch_norm = apply_batch_norm
         self.apply_dropout = apply_dropout
 
-        self.conv_2d_trans = layers.Conv2DTranspose(filters, kernel_size, strides, padding='same',
-                                                    kernel_initializer=initializer, use_bias=False)
+        self.conv_2d_trans = tf.keras.layers.Conv2DTranspose(filters, kernel_size, strides, padding='same',
+                                                             kernel_initializer=initializer, use_bias=False)
 
-        self.batch_norm = layers.BatchNormalization()
-        self.dropout = layers.Dropout(0.5)
-        self.activation = layers.LeakyReLU()
+        self.batch_norm = tf.keras.layers.BatchNormalization()
+        self.dropout = tf.keras.layers.Dropout(0.5)
+        self.activation = tf.keras.layers.LeakyReLU()
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x = self.conv_2d_trans(inputs)
 
@@ -62,3 +63,5 @@ class ConvTransposeBlock(layers.Layer):
             x = self.dropout(x)
 
         x = self.activation(x)
+
+        return x

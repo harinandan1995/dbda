@@ -20,7 +20,7 @@ class Discriminator(tf.keras.Model):
 
     def call(self, inputs, training=None, mask=None):
 
-        self.model(inputs, training=training)
+        return self.model(inputs, training=training)
 
     def _generate_model(self):
 
@@ -38,6 +38,10 @@ class Discriminator(tf.keras.Model):
         x = ConvBlock(1, 4, 1, False, False)(x)
 
         return tf.keras.Model(inputs=[inp, tar], outputs=x)
+
+    def summary(self, line_length=None, positions=None, print_fn=None):
+
+        return self.model.summary(line_length, positions, print_fn)
 
     def save_weights(self, filepath, overwrite=True, save_format=None):
         self.model.save_weights(filepath, overwrite, save_format)

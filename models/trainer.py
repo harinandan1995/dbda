@@ -11,7 +11,7 @@ from models.losses import discriminator_loss, generator_loss
 
 class GANTrainer:
 
-    def __init__(self, dataset, height, width,
+    def __init__(self, dataset, width, height,
                  save_summary=True, summary_dir='./summaries',
                  save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir='./checkpoints'):
 
