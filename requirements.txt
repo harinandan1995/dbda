@@ -1,0 +1,10 @@
+numpy
+tensorflow
+scipy
+tensorflow-gpu
+tensorflow_datasets
+matplotlib
+keras
+ipython
+opencv-python
+scikit-image
