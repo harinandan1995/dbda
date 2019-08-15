@@ -1,14 +1,19 @@
+import tensorflow as tf
+
 from data.dataset import FloorPlanDataset, FloorPlanDataType
 from models.trainer import GANTrainer
 
-DATA_DIR = '/home/harikatam/TUM/sose2019/IDP/datasets/'
+tf.enable_eager_execution()
+
+DATA_DIR = '/home/harikatam/TUM/sose2019/IDP/datasets'
 WIDTH = 256
 HEIGHT = 256
 
 floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
-                                      data_type=FloorPlanDataType.HDF5)
+                                      data_type=FloorPlanDataType.TFRECORD)
 
-dataset = floor_plan_dataset.generate_train_dataset('h5py', include_walls=True, include_doors=True,
+dataset = floor_plan_dataset.generate_train_dataset('tfrecords', max_samples=20,
+                                                    include_walls=True, include_doors=True,
                                                     include_windows=True, include_rooms=True,
                                                     include_shape=True, include_corners=False)
 

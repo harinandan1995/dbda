@@ -33,9 +33,9 @@ class Discriminator(tf.keras.Model):
         x = ConvBlock(128, 4, 2, False, True)(x)
         x = ConvBlock(256, 4, 2, False, True)(x)
         x = tf.keras.layers.ZeroPadding2D()(x)
-        x = ConvBlock(512, 4, 1, True, False)(x)
+        x = ConvBlock(512, 4, 1, True, False, padding='valid')(x)
         x = tf.keras.layers.ZeroPadding2D()(x)
-        x = ConvBlock(1, 4, 1, False, False)(x)
+        x = ConvBlock(1, 4, 1, False, False, padding='valid')(x)
 
         return tf.keras.Model(inputs=[inp, tar], outputs=x)
 

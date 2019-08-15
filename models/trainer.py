@@ -1,12 +1,12 @@
 import os
-
-import tensorflow as tf
 import time
 
-from utils.utils import create_directory_if_not_exist, get_timestamp
-from models.generator import Generator
+import tensorflow as tf
+
 from models.discriminator import Discriminator
+from models.generator import Generator
 from models.losses import discriminator_loss, generator_loss
+from utils.utils import create_directory_if_not_exist, get_timestamp
 
 
 class GANTrainer:

@@ -3,7 +3,8 @@ import tensorflow as tf
 
 class ConvBlock(tf.keras.layers.Layer):
 
-    def __init__(self, filters, kernel_size, strides, apply_batch_norm=True, apply_dropout=False):
+    def __init__(self, filters, kernel_size, strides,
+                 apply_batch_norm=True, apply_dropout=False, padding='same'):
 
         super(ConvBlock, self).__init__()
 
@@ -12,7 +13,7 @@ class ConvBlock(tf.keras.layers.Layer):
         self.apply_batch_norm = apply_batch_norm
         self.apply_dropout = apply_dropout
 
-        self.conv_2d = tf.keras.layers.Conv2D(filters, kernel_size, strides, padding='same',
+        self.conv_2d = tf.keras.layers.Conv2D(filters, kernel_size, strides, padding=padding,
                                               kernel_initializer= initializer, use_bias=False)
 
         self.batch_norm = tf.keras.layers.BatchNormalization()

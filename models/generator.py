@@ -61,26 +61,26 @@ class Generator(tf.keras.Model):
 
         return [
             ConvBlock(64, 4, 2, False, True),
+            ConvBlock(64, 4, 2, True, True),
             ConvBlock(128, 4, 2, True, True),
-            ConvBlock(256, 4, 2, True, True),
-            ConvBlock(512, 4, 2, True, False),
-            ConvBlock(512, 4, 2, True, False),
-            ConvBlock(512, 4, 2, True, False),
-            ConvBlock(512, 4, 2, True, False),
-            ConvBlock(512, 4, 2, True, False)
+            ConvBlock(128, 4, 2, True, False),
+            ConvBlock(128, 4, 2, True, False),
+            ConvBlock(256, 4, 2, True, False),
+            ConvBlock(256, 4, 2, True, False),
+            ConvBlock(256, 4, 2, True, False)
         ]
 
     @staticmethod
     def _get_upsample_stack():
 
         return [
-            ConvTransposeBlock(512, 4, True, True),
-            ConvTransposeBlock(512, 4, True, True),
-            ConvTransposeBlock(512, 4, True, True),
-            ConvTransposeBlock(512, 4, True, False),
-            ConvTransposeBlock(256, 4, True, False),
-            ConvTransposeBlock(128, 4, True, False),
-            ConvTransposeBlock(64, 4, True, False)
+            ConvTransposeBlock(256, 4, 2, True, True),
+            ConvTransposeBlock(256, 4, 2, True, True),
+            ConvTransposeBlock(256, 4, 2, True, True),
+            ConvTransposeBlock(128, 4, 2, True, False),
+            ConvTransposeBlock(128, 4, 2, True, False),
+            ConvTransposeBlock(64, 4, 2, True, False),
+            ConvTransposeBlock(64, 4, 2, True, False)
         ]
 
     def summary(self, line_length=None, positions=None, print_fn=None):
