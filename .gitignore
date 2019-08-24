@@ -3,8 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Datasets
+# Datasets checkpoints and summaries
 datasets/
+checkpoints/
+summaries/
 
 # PyCharm files
 .idea/

@@ -12,7 +12,7 @@ HEIGHT = 256
 floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
                                       data_type=FloorPlanDataType.TFRECORD)
 
-dataset = floor_plan_dataset.generate_train_dataset('tfrecords', max_samples=20,
+dataset = floor_plan_dataset.generate_train_dataset('tfrecords', max_samples=-1,
                                                     include_walls=True, include_doors=True,
                                                     include_windows=True, include_rooms=True,
                                                     include_shape=True, include_corners=False)
@@ -21,8 +21,8 @@ gan_trainer = GANTrainer(dataset, WIDTH, HEIGHT, save_summary=True, summary_dir=
                          save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir='./checkpoints')
 
 EPOCHS = 10
-BATCH_SIZE = 32
-NUM_SAMPLES = 50
+BATCH_SIZE = 16
+NUM_SAMPLES = 4000
 
 gen_config = {
     'optimizer': 'adam',

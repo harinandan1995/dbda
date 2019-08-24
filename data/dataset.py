@@ -110,7 +110,8 @@ class FloorPlanDataset:
         file_names = self._get_all_file_names(data_dir, FloorPlanDataType.TFRECORD.value, max_samples)
 
         files = tf.data.Dataset.list_files(file_names)
-        dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=self.num_parallel_reads,
+        dataset = files.interleave(lambda x: tf.data.TFRecordDataset(x, compression_type='GZIP'),
+                                   cycle_length=self.num_parallel_reads,
                                    num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.map(self._parse_function, num_parallel_calls=self.num_parallel_reads)
@@ -149,7 +150,7 @@ class FloorPlanDataset:
         if include_rooms:
             out['room_mask'] = tf.reshape(data['room_mask'], [self.width, self.height, 10])
         if include_shape:
-            out['bounding_mask'] = tf.reshape(data['bounding_mask'], [self.width, self.height, 1])
+            out['shape_mask'] = tf.reshape(data['bounding_mask'], [self.width, self.height, 1])
         if include_corners:
             out['corner_mask'] = tf.reshape(data['corner_mask'], [self.width, self.height, 17])
 

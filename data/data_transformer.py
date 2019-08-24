@@ -117,8 +117,7 @@ class VectorToImageTransformer:
         self.out_width = config.out_width
         self.out_height = config.out_height
 
-        if not os.path.exists(self.out_dir):
-            os.makedirs(self.out_dir)
+        create_directory_if_not_exist(self.out_dir)
 
         self.file_paths = self._get_file_paths(num_images)
         self.num_images = len(self.file_paths)
@@ -127,17 +126,16 @@ class VectorToImageTransformer:
 
         for index, file_path in enumerate(self.file_paths):
 
-            print('Generating image for %d th file, location: %s'%(index, file_path))
+            print('Transforming %d th file, location: %s' % (index, file_path))
 
-            walls, wall_types, doors, windows, rooms, icons, actual_width, actual_height, center_x, center_y = self._load_semantics(file_path)
+            walls, wall_types, doors, windows, rooms, icons, max_x, max_y, min_x, min_y = self._load_semantics(file_path)
 
             walls = self._filter_walls(walls, wall_types)
 
             corners, success = self._lines_2_corners(walls, gap=self.config.wall_thickness)
 
             walls, doors, windows, rooms, icons, corners = self._transform_points(walls, doors, windows, rooms, icons,
-                                                                                  corners, actual_width, actual_height,
-                                                                                  center_x, center_y)
+                                                                                  corners, max_x, max_y, min_x, min_y)
 
             shape_mask = self._get_bounding_mask(walls)
             wall_mask = self._get_wall_mask(walls)
@@ -182,8 +180,10 @@ class VectorToImageTransformer:
             os.makedirs(base_dir)
 
         out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0] + '.tfrecord')
-
-        with tf.python_io.TFRecordWriter(out_file_name) as writer:
+        
+        print('Saving output at %s' % out_file_name)
+        
+        with tf.python_io.TFRecordWriter(out_file_name, 'GZIP') as writer:
             example = self._serialize_example_pyfunction(wall_mask, door_mask, window_mask,
                                                          room_mask, corner_mask, bounding_mask)
             writer.write(example.SerializeToString())
@@ -312,13 +312,7 @@ class VectorToImageTransformer:
                         icons[label].append(
                             (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
 
-        actual_width = max(x) + min(x)
-        actual_height = max(y) + min(y)
-
-        center_x = (max(x) + min(x)) / 2
-        center_y = (max(y) + min(y)) / 2
-
-        return walls, wall_types, doors, windows, rooms, icons, actual_width, actual_height, center_x, center_y
+        return walls, wall_types, doors, windows, rooms, icons, max(x), max(y), min(x), min(y)
 
     def _filter_walls(self, walls, wall_types):
         invalid_indices = {}
@@ -437,7 +431,7 @@ class VectorToImageTransformer:
         return corners, success
 
     @staticmethod
-    def _scale_and_transform_point(point, scale_factor, tx, ty):
+    def _augment_point(point, scale_factor, tx_before, ty_before, tx_after, ty_after):
         """
         Scales and translates the point
         :param point: Point to be transformed
@@ -446,33 +440,39 @@ class VectorToImageTransformer:
         :param ty: Translation along y
         :return: Transformed point
         """
-        return int(scale_factor * point[0] + tx), int(scale_factor * point[1] + ty)
 
-    def _transform_points(self, walls, doors, windows, rooms, icons, corners, actual_width, actual_height, center_x, center_y):
+        return int(scale_factor * (point[0] + tx_before) + tx_after), \
+               int(scale_factor * (point[1] + ty_before) + ty_after)
+
+    def _transform_points(self, walls, doors, windows, rooms, icons, corners, max_x, max_y, min_x, min_y):
         """
         Scales the points to fit into out_width, out_height
         Translates the points to the center of the output image
 
-        :param actual_width: Actual width of the floor plan according to the vector format
-        :param actual_height: Actual height of the floor plan according to the vector format
-        :param center_x: Original center x of the floor plan according to the vector format
-        :param center_y: Original center y of the floor plan according to the vector format
+        :param max_x: Maximum x value in the given elements
+        :param max_y: Maximum y value in the given elements
+        :param min_x: Minimum x value in the given elements
+        :param min_y: Minimum y value in the given elements
         :return: Transformed walls, doors, windows, rooms, icons, corners
         """
 
-        scaling_factor = min(self.out_width / actual_width, self.out_height / actual_height) * 0.95
-        tx = (self.out_height/2 - (center_x * scaling_factor))
-        ty = (self.out_width/2 - (center_y * scaling_factor))
+        tx_before = -min_x
+        ty_before = -min_y
 
-        corners = [(self._scale_and_transform_point(corner[0], scaling_factor, tx, ty), corner[1]) for corner in corners]
-        walls = [[self._scale_and_transform_point(wall[c], scaling_factor, tx, ty) for c in range(2)] for wall in walls]
-        doors = [[self._scale_and_transform_point(door[c], scaling_factor, tx, ty) for c in range(2)] for door in doors]
-        windows = [[self._scale_and_transform_point(window[c], scaling_factor, tx, ty) for c in range(2)] for window in windows]
+        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.95
+
+        tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
+        ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
+
+        corners = [(self._augment_point(corner[0], sf, tx_before, ty_before, tx_after, ty_after), corner[1]) for corner in corners]
+        walls = [[self._augment_point(wall[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for wall in walls]
+        doors = [[self._augment_point(door[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for door in doors]
+        windows = [[self._augment_point(window[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for window in windows]
 
         for label, items in icons.items():
-            icons[label] = [[self._scale_and_transform_point(item[c], scaling_factor, tx, ty) for c in range(2)] for item in items]
+            icons[label] = [[self._augment_point(item[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for item in items]
         for label, items in rooms.items():
-            rooms[label] = [[self._scale_and_transform_point(item[c], scaling_factor, tx, ty) for c in range(2)] for item in items]
+            rooms[label] = [[self._augment_point(item[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for item in items]
 
         return walls, doors, windows, rooms, icons, corners
 
