@@ -127,15 +127,15 @@ class FloorPlanDataset:
     def _parse_function(self, example_proto):
 
         feature_description = {
-            'wall_mask': tf.FixedLenFeature([1*self.width*self.height], tf.float32),
-            'door_mask': tf.FixedLenFeature([1*self.width*self.height], tf.float32),
-            'window_mask': tf.FixedLenFeature([1*self.width*self.height], tf.float32),
-            'room_mask': tf.FixedLenFeature([10*self.width*self.height], tf.float32),
-            'corner_mask': tf.FixedLenFeature([17*self.width*self.height], tf.float32),
-            'bounding_mask': tf.FixedLenFeature([1*self.width*self.height], tf.float32)
+            'wall_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'door_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'window_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'room_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'corner_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'bounding_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True)
         }
 
-        return tf.parse_single_example(example_proto, feature_description)
+        return tf.io.parse_single_example(example_proto, feature_description)
 
     def _transform_and_filter_masks(self, data, include_walls, include_doors,
                                     include_windows, include_rooms, include_shape, include_corners):

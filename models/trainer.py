@@ -77,7 +77,7 @@ class GANTrainer:
                 gen_loss_metric(gen_loss)
                 disc_loss_metric(disc_loss)
 
-                if step % 5 == 0:
+                if step % 1 == 0:
                     print('Step %4f, Loss - Gen %.7f Disc %.7f' % (step, gen_loss, disc_loss))
 
             print('After epoch %d, time: %d, Loss - gen: %.7f disc %.7f' % (epoch+1, time.time() - start,
@@ -134,7 +134,7 @@ class GANTrainer:
         train_dataset = self.dataset
 
         if shuffle:
-            train_dataset = train_dataset.shuffle(tf.data.experimental.AUTOTUNE)
+            train_dataset = train_dataset.shuffle(100)
 
         if num_samples > batch_size:
             train_dataset = train_dataset.take(num_samples)

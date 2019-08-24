@@ -1,10 +1,6 @@
-numpy
-tensorflow
-scipy
 tensorflow-gpu
-tensorflow_datasets
+scipy
 matplotlib
-keras
 ipython
 opencv-python
 scikit-image
