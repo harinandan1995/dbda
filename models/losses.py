@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 
+gen_bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
 
@@ -17,7 +18,7 @@ def generator_loss(disc_generated_output, gen_output, target, coeff):
 
     gan_loss = bce(tf.ones_like(disc_generated_output), disc_generated_output)
 
-    l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
+    l1_loss = gen_bce(target, gen_output)
 
     total_gen_loss = gan_loss + coeff * l1_loss
 

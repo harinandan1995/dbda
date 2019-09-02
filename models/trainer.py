@@ -6,7 +6,7 @@ import tensorflow as tf
 from models.discriminator import Discriminator
 from models.generator import Generator
 from models.losses import discriminator_loss, generator_loss
-from utils.utils import create_directory_if_not_exist, get_timestamp
+from utils.utils import *
 
 
 class GANTrainer:
@@ -27,10 +27,16 @@ class GANTrainer:
 
         self.save_gen_ckpt = save_gen_ckpt
         self.save_disc_ckpt = save_disc_ckpt
-        self.ckpt_dir = ckpt_dir
+        self.ckpt_dir = os.path.join(ckpt_dir, get_day(), get_time())
 
         if self.save_gen_ckpt or self.save_disc_ckpt:
             create_directory_if_not_exist(self.ckpt_dir)
+
+        if self.save_summary:
+            self.summary_writer_path = os.path.join(self.summary_dir, get_day(), get_time())
+            create_directory_if_not_exist(self.summary_writer_path)
+
+        tf.summary.record_if(self.save_summary)
 
         self.gen_config = {
             'optimizer': 'adam',
@@ -62,23 +68,30 @@ class GANTrainer:
 
         for epoch in range(epochs):
 
+            summary_writer = tf.summary.create_file_writer(self.summary_writer_path)
             start = time.time()
             gen_loss_metric = tf.keras.metrics.Mean()
             disc_loss_metric = tf.keras.metrics.Mean()
 
-            for step, data in enumerate(train_dataset):
+            with summary_writer.as_default():
 
-                wa, d, wi = data['wall_mask'], data['door_mask'], data['window_mask']
-                r, s = data['room_mask'], data['shape_mask']
+                for step, data in enumerate(train_dataset):
 
-                gen_loss, disc_loss = self._train_step(generator, discriminator, wa, d, wi, r, s,
-                                                       generator_optimizer, discriminator_optimizer, coeff)
+                    wa, d, wi = data['wall_mask'], data['door_mask'], data['window_mask']
+                    r, s = data['room_mask'], data['shape_mask']
 
-                gen_loss_metric(gen_loss)
-                disc_loss_metric(disc_loss)
+                    gen_loss, disc_loss = self._train_step(
+                        generator, discriminator, wa, d, wi, r, s, generator_optimizer,
+                        discriminator_optimizer, coeff, step)
 
-                if step % 1 == 0:
-                    print('Step %4f, Loss - Gen %.7f Disc %.7f' % (step, gen_loss, disc_loss))
+                    tf.summary.scalar('gen_loss', gen_loss, step)
+                    tf.summary.scalar('disc_loss', disc_loss, step)
+
+                    gen_loss_metric(gen_loss)
+                    disc_loss_metric(disc_loss)
+
+                    if step % 1 == 0:
+                        print('Step %4f, Loss - Gen %.7f Disc %.7f' % (step, gen_loss, disc_loss))
 
             print('After epoch %d, time: %d, Loss - gen: %.7f disc %.7f' % (epoch+1, time.time() - start,
                                                                             gen_loss_metric.result(),
@@ -88,7 +101,7 @@ class GANTrainer:
 
     @staticmethod
     def _train_step(generator, discriminator, walls, doors, windows, rooms, shape,
-                    generator_optimizer, discriminator_optimizer, coeff):
+                    generator_optimizer, discriminator_optimizer, coeff, step):
 
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             gen_output = generator(shape, training=True)
@@ -109,6 +122,9 @@ class GANTrainer:
                                                 generator.trainable_variables))
         discriminator_optimizer.apply_gradients(zip(discriminator_gradients,
                                                     discriminator.trainable_variables))
+
+        variable_summaries(gen_output, step, 'gen')
+        variable_summaries(target, step, 'tar')
 
         return gen_loss, disc_loss
 
@@ -146,11 +162,11 @@ class GANTrainer:
     def _save_checkpoints(self, epoch, generator, discriminator):
 
         if self.save_gen_ckpt:
-            gen_ckpt_file_name = os.path.join(self.ckpt_dir, "gen_%s_%d.h5" %(get_timestamp(), epoch))
+            gen_ckpt_file_name = os.path.join(self.ckpt_dir, "gen_%s_%d.h5" % (get_timestamp(), epoch))
             print('Saving generator weights at %s' % gen_ckpt_file_name)
             generator.save_weights(gen_ckpt_file_name)
 
         if self.save_disc_ckpt:
-            disc_ckpt_file_name = os.path.join(self.ckpt_dir, "disc_%s_%d.h5" %(get_timestamp(), epoch))
+            disc_ckpt_file_name = os.path.join(self.ckpt_dir, "disc_%s_%d.h5" % (get_timestamp(), epoch))
             print('Saving discriminator weights at %s' % disc_ckpt_file_name)
             discriminator.save_weights(disc_ckpt_file_name)

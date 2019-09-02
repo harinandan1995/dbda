@@ -21,10 +21,10 @@ class FloorPlanDataset:
         self.data_type = data_type
         self.num_parallel_reads = num_parallel_reads
 
-    def generate_train_dataset(self, train_data_dir='train', max_samples=-1,
-                               include_walls=True, include_doors=True,
-                               include_windows=True, include_rooms=True,
-                               include_shape=True, include_corners=False):
+    def generate_dataset(self, train_data_dir='train', max_samples=-1,
+                         include_walls=True, include_doors=True,
+                         include_windows=True, include_rooms=True,
+                         include_shape=True, include_corners=False):
 
         if not (include_walls or include_doors or include_windows or
                 include_rooms or include_shape or include_corners):
@@ -148,7 +148,7 @@ class FloorPlanDataset:
         if include_windows:
             out['window_mask'] = tf.reshape(data['window_mask'], [self.width, self.height, 1])
         if include_rooms:
-            out['room_mask'] = tf.reshape(data['room_mask'], [self.width, self.height, 10])
+            out['room_mask'] = tf.transpose(tf.reshape(data['room_mask'], [10, self.width, self.height]), perm=[1, 2, 0])
         if include_shape:
             out['shape_mask'] = tf.reshape(data['bounding_mask'], [self.width, self.height, 1])
         if include_corners:

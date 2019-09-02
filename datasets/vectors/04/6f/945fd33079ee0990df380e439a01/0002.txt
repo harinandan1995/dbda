@@ -1,0 +1,10 @@
+127	77	159	102	washing_basin	2	1	
+65	178	117	210	cooking_counter	1	1	
+63	104	86	136	cooking_counter	1	1	
+95	111	161	135	special	1	1	
+92	75	119	101	stairs	1	1	
+70	182.5	120	202.5	kitchen	1	1	
+124	175.5	124	210	wall	1	1	
+66.5	210	124	210	wall	1	1	
+66.5	175.5	66.5	210	wall	1	1	
+66.5	175.5	124	175.5	wall	1	1	

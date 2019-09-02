@@ -1,0 +1,17 @@
+248	36	278	36	door	1	1	
+171	40	197	64	entrance	1	1	
+238	187	262	212	washing_basin	2	1	
+150	149	194	175	bathtub	1	1	
+199	38	234	69	entrance	1	1	
+124	39	155	62	special	3	1	
+248	40	280	65	entrance	1	1	
+240	144	260	186	cooking_counter	1	1	
+121	325	157	350	special	3	1	
+143	70	164	94	washing_basin	2	1	
+233	81	260	118	washing_basin	1	1	
+238.5	42.5	288.5	62.5	PS	1	1	
+284	36	297	36	wall	1	1	
+284	36	284	69	wall	1	1	
+243.5	69	284	69	wall	1	1	
+243.5	36	243.5	69	wall	1	1	
+243.5	36	284	36	wall	1	1	

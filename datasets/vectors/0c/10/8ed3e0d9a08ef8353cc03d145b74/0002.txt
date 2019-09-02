@@ -1,0 +1,12 @@
+103	13	103	40	door	1	1	
+30	12	57	60	bathtub	1	1	
+28	442	109	462	cooking_counter	1	1	
+146	17	179	51	entrance	1	1	
+80	44	101	64	toilet	1	1	
+59	46	80	61	bathtub	1	1	
+129	371	179	402	entrance	1	1	
+37.5	29	87.5	49	bathroom	1	1	
+103	9	103	69	wall	1	1	
+22.5	69	103	69	wall	1	1	
+22.5	9	22.5	69	wall	1	1	
+22.5	9	103	9	wall	1	1	

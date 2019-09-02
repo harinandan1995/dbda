@@ -1,0 +1,17 @@
+137	256	181	256	door	1	1	
+205	119	220	138	cooking_counter	1	1	
+167	35	196	50	entrance	1	1	
+201	21	228	49	special	3	1	
+194	257	228	286	special	3	1	
+206	51	225	80	cooking_counter	1	1	
+141	140	173	161	bathtub	1	1	
+205	78	224	118	cooking_counter	1	1	
+154	99.5	204	119.5	kitchen	1	1	
+154	203	204	223	bedroom	1	1	
+225	170	225	256	wall	1	1	
+133	256	225	256	wall	1	1	
+225	49	225	170	wall	1	1	
+133	170	225	170	wall	1	1	
+133	49	133	170	wall	1	1	
+133	170	133	256	wall	1	1	
+133	49	225	49	wall	1	1	

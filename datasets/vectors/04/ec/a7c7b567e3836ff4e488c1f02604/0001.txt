@@ -1,0 +1,16 @@
+100	142	176	142	door	1	1	
+151	461	183	491	washing_basin	1	1	
+22	498	81	552	special	3	1	
+150	330	209	370	bathtub	1	1	
+192	421	213	457	washing_basin	1	1	
+56	279	87	312	washing_basin	2	1	
+56	426	90	460	washing_basin	1	1	
+99	469	139	496	entrance	1	1	
+56	466	92	492	entrance	1	1	
+56	319	92	368	cooking_counter	1	1	
+30	87	80	143	special	3	1	
+109	293	159	313	kitchen	1	1	
+219.5	142	219.5	464.5	wall	1	1	
+49.5	464.5	219.5	464.5	wall	1	1	
+49.5	142	49.5	464.5	wall	1	1	
+49.5	142	219.5	142	wall	1	1	

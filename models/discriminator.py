@@ -24,6 +24,8 @@ class Discriminator(tf.keras.Model):
 
     def _generate_model(self):
 
+        initializer = tf.random_normal_initializer(0., 0.02)
+
         inp = tf.keras.layers.Input(shape=[self.height, self.width, self.inp_image_channels], name='input_image')
         tar = tf.keras.layers.Input(shape=[self.height, self.width, self.tar_image_channels], name='target_image')
 
@@ -35,7 +37,7 @@ class Discriminator(tf.keras.Model):
         x = tf.keras.layers.ZeroPadding2D()(x)
         x = ConvBlock(512, 4, 1, True, False, padding='valid')(x)
         x = tf.keras.layers.ZeroPadding2D()(x)
-        x = ConvBlock(1, 4, 1, False, False, padding='valid')(x)
+        x = tf.keras.layers.Conv2D(1, 4, strides=1, kernel_initializer=initializer)(x)
 
         return tf.keras.Model(inputs=[inp, tar], outputs=x)
 

@@ -1,0 +1,13 @@
+246	51.5	281	51.5	door	1	1	
+242	61	280	93	entrance	1	1	
+204	62	232	100	washing_basin	1	1	
+282	243	308	275	cooking_counter	1	1	
+288	135	310	162	washing_basin	2	1	
+176	176	237	252	cooking_counter	1	1	
+289	55	326	84	stairs	1	1	
+291	387	342	417	special	3	1	
+226	226.5	276	246.5	bedroom	1	1	
+336	51.5	336	422	wall	1	1	
+166	422	336	422	wall	1	1	
+166	51.5	166	422	wall	1	1	
+166	51.5	336	51.5	wall	1	1	

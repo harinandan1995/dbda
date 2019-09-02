@@ -1,1 +1,1 @@
-python3 train.py --data /ssdtemp/datasets -e 25 -b 64 -c /ssdtemp/checkpoints -s /ssdtemp/summaries
+python3 train.py --data /ssdtemp/datasets/tfrecords -e 25 -b 64 -c /ssdtemp/checkpoints -s /ssdtemp/summaries

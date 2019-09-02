@@ -1,0 +1,14 @@
+167	56.5	183	56.5	door	1	1	
+132	56.5	159	56.5	door	1	1	
+187	140	205	167	washing_basin	1	1	
+187	377	204	399	special	3	1	
+167	61	187	84	washing_basin	1	1	
+167	89	203	133	washing_basin	1	1	
+115	62	162	84	bathtub	1	1	
+183	59	206	82	washing_basin	1	1	
+189	169	205	189	special	3	1	
+132.5	60.5	182.5	80.5	washing_room	1	1	
+106	56.5	106	85	wall	1	1	
+106	56.5	209	56.5	wall	1	1	
+209	56.5	209	85	wall	1	1	
+106	85	209	85	wall	1	1	

@@ -3,6 +3,7 @@ import os
 import time
 
 import numpy as np
+import tensorflow as tf
 
 
 # Create a directories in the path if they dont exist
@@ -10,6 +11,14 @@ def create_directory_if_not_exist(path):
 
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def get_day():
+    return datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')
+
+
+def get_time():
+    return datetime.datetime.fromtimestamp(time.time()).strftime('%H%M%S')
 
 
 def get_timestamp():
@@ -62,3 +71,16 @@ def merge_lines(line_1, line_2):
 def convert_to_point(x, y):
 
     return int(round(float(x))), int(round(float(y)))
+
+
+def variable_summaries(var, step, prefix):
+
+    mean = tf.reduce_mean(var)
+    tf.summary.scalar(prefix + '_mean', mean, step)
+
+    stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+
+    tf.summary.scalar(prefix + '_stddev', stddev, step)
+    tf.summary.scalar(prefix + '_max', tf.reduce_max(var), step)
+    tf.summary.scalar(prefix + '_min', tf.reduce_min(var), step)
+    tf.summary.histogram(prefix + '_histogram', var, step)

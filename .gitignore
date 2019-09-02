@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 
 # Datasets checkpoints and summaries
-datasets/
 checkpoints/
 summaries/
 
