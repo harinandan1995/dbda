@@ -7,7 +7,7 @@ parser = ArgumentParser()
 parser.add_argument("-i", "--data", help='Path to the directory where the data is stored',
                     default='./datasets/tfrecords')
 parser.add_argument("-c", "--ckpt", help='Path to the directory where the checkpoints should be stored',
-                    default='./checkpoints/20190901/135146/gen_20190901_140802_1.h5')
+                    default='./checkpoints/20190906/174818/gen_20190906_212621_28.h5')
 
 args = vars(parser.parse_args())
 
@@ -24,4 +24,4 @@ dataset = floor_plan_dataset.generate_dataset('val', max_samples=-1,
                                               include_shape=True, include_corners=False)
 
 evaluator = FloorPlanGenerator(dataset, args['ckpt'], WIDTH, HEIGHT)
-evaluator.evaluate(1)
+evaluator.evaluate(5)

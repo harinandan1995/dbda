@@ -77,4 +77,3 @@ Use the following command if you are using a virtual environment
      
     venv/bin/tensorboard --logdir=./summaries
     
-> 

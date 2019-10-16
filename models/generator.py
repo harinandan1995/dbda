@@ -93,4 +93,6 @@ class Generator(tf.keras.Model):
 
     def load_weights(self, filepath, by_name=False):
 
-        self.model.load_weights(filepath)
+        if filepath is not None:
+            print('Loading generator weights from %s' % filepath)
+            self.model.load_weights(filepath)

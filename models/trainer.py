@@ -1,8 +1,3 @@
-import os
-import time
-
-import tensorflow as tf
-
 from models.discriminator import Discriminator
 from models.generator import Generator
 from models.losses import discriminator_loss, generator_loss
@@ -20,7 +15,7 @@ class GANTrainer:
         self.width = width
 
         self.save_summary = save_summary
-        self.summary_dir = summary_dir
+        self.summary_dir = os.path.join(summary_dir, get_day(), get_time())
 
         if self.save_summary:
             create_directory_if_not_exist(self.summary_dir)
@@ -32,9 +27,7 @@ class GANTrainer:
         if self.save_gen_ckpt or self.save_disc_ckpt:
             create_directory_if_not_exist(self.ckpt_dir)
 
-        if self.save_summary:
-            self.summary_writer_path = os.path.join(self.summary_dir, get_day(), get_time())
-            create_directory_if_not_exist(self.summary_writer_path)
+        self.epoch_summary_writer = tf.summary.create_file_writer(self.summary_dir)
 
         tf.summary.record_if(self.save_summary)
 
@@ -65,13 +58,14 @@ class GANTrainer:
         print(discriminator.summary())
 
         generator_optimizer, discriminator_optimizer = self._get_optimizers()
+        gen_loss_metric = tf.keras.metrics.Mean()
+        disc_loss_metric = tf.keras.metrics.Mean()
 
         for epoch in range(epochs):
 
-            summary_writer = tf.summary.create_file_writer(self.summary_writer_path)
             start = time.time()
-            gen_loss_metric = tf.keras.metrics.Mean()
-            disc_loss_metric = tf.keras.metrics.Mean()
+
+            summary_writer = tf.summary.create_file_writer(os.path.join(self.summary_dir, str(epoch)))
 
             with summary_writer.as_default():
 
@@ -93,9 +87,24 @@ class GANTrainer:
                     if step % 1 == 0:
                         print('Step %4f, Loss - Gen %.7f Disc %.7f' % (step, gen_loss, disc_loss))
 
+                    self.epoch_summary_writer.flush()
+
+            with self.epoch_summary_writer.as_default():
+
+                tf.summary.scalar('gen_loss_epoch', gen_loss_metric.result(), step=epoch,
+                                  description='Average generator loss per epoch')
+
+                tf.summary.scalar('dis_loss_epoch', disc_loss_metric.result(), step=epoch,
+                                  description='Average generator loss per epoch')
+
+                self.epoch_summary_writer.flush()
+
             print('After epoch %d, time: %d, Loss - gen: %.7f disc %.7f' % (epoch+1, time.time() - start,
                                                                             gen_loss_metric.result(),
                                                                             disc_loss_metric.result()))
+
+            gen_loss_metric.reset_states()
+            disc_loss_metric.reset_states()
 
             self._save_checkpoints(epoch, generator, discriminator)
 
@@ -122,9 +131,6 @@ class GANTrainer:
                                                 generator.trainable_variables))
         discriminator_optimizer.apply_gradients(zip(discriminator_gradients,
                                                     discriminator.trainable_variables))
-
-        variable_summaries(gen_output, step, 'gen')
-        variable_summaries(target, step, 'tar')
 
         return gen_loss, disc_loss
 

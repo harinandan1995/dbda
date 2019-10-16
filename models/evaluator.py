@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from models.generator import Generator
+from utils.utils import get_timestamp
 
 
 class FloorPlanGenerator:
@@ -50,21 +51,19 @@ class FloorPlanGenerator:
             gen_out = self.generator(data['shape_mask']).numpy()
             gen_out = np.rollaxis(gen_out[0], 2, 0)
 
-            wall_mask = np.expand_dims(gen_out[0], axis=0)
-            door_mask = np.expand_dims(gen_out[1], axis=0)
-            window_mask = np.expand_dims(gen_out[2], axis=0)
-            room_mask = gen_out[3:]
-
             fig = plt.figure(figsize=(8, 8))
-            fig.add_subplot(2, 2, 1)
+            fig.add_subplot(4, 4, 1)
             plt.imshow(gen_out[0], cmap='hot', interpolation='nearest')
-            fig.add_subplot(2, 2, 2)
+            fig.add_subplot(4, 4, 2)
             plt.imshow(gen_out[1], cmap='hot', interpolation='nearest')
-            fig.add_subplot(2, 2, 3)
+            fig.add_subplot(4, 4, 3)
             plt.imshow(gen_out[2], cmap='hot', interpolation='nearest')
-            fig.add_subplot(2, 2, 4)
-            plt.imshow(self._mask_to_segmentation_image(room_mask))
 
+            for i in range(10):
+                fig.add_subplot(4, 4, i + 4)
+                plt.imshow(gen_out[i + 3], cmap='hot', interpolation='nearest')
+
+            plt.savefig('/home/harikatam/Pictures/' + get_timestamp() + '.png')
             plt.show()
 
     @staticmethod
