@@ -8,21 +8,20 @@ sudo apt-get update
 # Install development and runtime libraries (~4GB)
 sudo apt-get install -y --no-install-recommends \
     cuda-10-0 \
-    libcudnn7=7.6.0.64-1+cuda10.0  \
-    libcudnn7-dev=7.6.0.64-1+cuda10.0
+    libcudnn7=7.6.2.24-1+cuda10.0  \
+    libcudnn7-dev=7.6.2.24-1+cuda10.0
 
 
 # Install TensorRT. Requires that libcudnn7 is installed above.
-sudo apt-get update \
-    && sudo apt-get install -y --no-install-recommends libnvinfer5=5.1.5-1+cuda10.0 \
-    && sudo apt-get install -y --no-install-recommends libnvinfer-dev=5.1.5-1+cuda10.0
+sudo apt-get install -y --no-install-recommends libnvinfer5=5.1.5-1+cuda10.0 \
+    libnvinfer-dev=5.1.5-1+cuda10.0
 
 
-sudo apt-get -y install python3-pip
+sudo apt install python3.7
 
 sudo apt-get update
 
-pip3 --version
+python3.7 -m pip --version
 
-pip3 install -r /home/ubuntu/building-design-assistant/requirements.txt
+python3.7 -m pip install -r /home/ubuntu/building-design-assistant/requirements.txt
 

@@ -1,12 +1,11 @@
-from argparse import ArgumentParser
-
-import tensorflow as tf
 import os
+from argparse import ArgumentParser
 
 from data.dataset import FloorPlanDataset, FloorPlanDataType
 from models.trainer import GANTrainer
+from utils.utils import set_gpu_growth
 
-tf.compat.v1.enable_eager_execution()
+set_gpu_growth()
 
 parser = ArgumentParser()
 parser.add_argument("-i", "--data", help='Path to the directory where the data is stored',
@@ -29,32 +28,29 @@ HEIGHT = 256
 floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
                                       data_type=FloorPlanDataType.TFRECORD)
 
-dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1,
-                                              include_walls=True, include_doors=True,
-                                              include_windows=True, include_rooms=True,
-                                              include_shape=True, include_corners=False)
+dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 
-CKPT_DIR = '/home/harikatam/TUM/sose2019/IDP/building-design-assistant/checkpoints/20190906/112619/'
-GEN_CKPT = os.path.join(CKPT_DIR, 'gen_20190906_154829_29.h5')
-DISC_CKPT = os.path.join(CKPT_DIR, 'disc_20190906_154829_29.h5')
+CKPT_DIR = './checkpoints/20191025/211207'
+GEN_CKPT = os.path.join(CKPT_DIR, 'gen_20191025_233943_22.h5')
+DISC_CKPT = os.path.join(CKPT_DIR, 'disc_20191025_233943_22.h5')
 
 gan_trainer = GANTrainer(dataset, WIDTH, HEIGHT, save_summary=True, summary_dir=args['summary'],
                          save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir=args['ckpt'])
 
 EPOCHS = args['epochs']
 BATCH_SIZE = args['batch']
-NUM_SAMPLES = 4000
+NUM_SAMPLES = 5200
 
 gen_config = {
     'optimizer': 'adam',
-    'lr': 6e-4
+    'lr': 8e-4
 }
 
 disc_config = {
     'optimizer': 'adam',
-    'lr': 2e-4
+    'lr': 4e-4
 }
 
 gan_trainer.train(epochs=EPOCHS, batch_size=BATCH_SIZE, num_samples=NUM_SAMPLES,
-                  shuffle=False, coeff=100, load_gen_ckpt=None, load_disc_path=None,
+                  shuffle=False, coeff=5, load_gen_ckpt=None, load_disc_path=None,
                   gen_config=gen_config, disc_config=disc_config)

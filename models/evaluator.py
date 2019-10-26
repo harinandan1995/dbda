@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,64 +9,120 @@ from utils.utils import get_timestamp
 
 class FloorPlanGenerator:
 
-    def __init__(self, dataset, gen_ckpt_path, out_dir, width=256, height=256):
+    """
+    For a given set of inputs (shape mask etc.) generates masks for walls, windows, doors,
+    rooms, corners using the generator from the checkpoint
+
+    :param dataset: TFDataset from where the shape masks are stored
+    :param gen_ckpt_path: Path to the checkpoint from where the generator weights are loaded
+    :param
+    """
+
+    def __init__(self, dataset, gen_ckpt_path, out_dir='./out', width=256, height=256):
 
         self.dataset = dataset
         self.width = width
         self.height = height
         self.out_dir = out_dir
 
-        self.generator = Generator(1, 13, gen_ckpt_path, width, height)
+        self.generator = Generator(1, [3, 10, 17], gen_ckpt_path, width, height)
 
     def evaluate(self, max_samples=10):
 
         dataset = self.dataset.batch(1)
 
-        for index, data in dataset.enumerate():
+        # Walls, doors, windows, rooms, corners, shape, room types, wall count,
+        # door count, window count
+        for index, (wa, d, wi, r, c, s, rt, wc, dc, wic) in dataset.enumerate():
 
             if index >= max_samples > 0:
                 return
 
-            wa, d, wi = data['wall_mask'], data['door_mask'], data['window_mask']
-            r, s = data['room_mask'], data['shape_mask']
+            print(wc, dc, wic)
 
-            fig = plt.figure(figsize=(8, 8))
-            fig.add_subplot(4, 4, 1)
-            wall_mask = np.rollaxis(wa[0].numpy(), 2, 0)[0]
-            plt.imshow(wall_mask)
-            fig.add_subplot(4, 4, 2)
-            door_mask = np.rollaxis(d[0].numpy(), 2, 0)[0]
-            plt.imshow(door_mask)
-            fig.add_subplot(4, 4, 3)
-            window_mask = np.rollaxis(wi[0].numpy(), 2, 0)[0]
-            plt.imshow(window_mask)
+            self._plot_original_data(wa, d, wi, r, c, s, save_output=False)
 
-            for i in range(10):
-                target_numpy = np.rollaxis(r[0].numpy(), 2, 0)
-                fig.add_subplot(4, 4, i + 4)
-                plt.imshow(target_numpy[i])
+            self._plot_generated_data(s, save_output=True)
 
-            fig.add_subplot(4, 4, 14)
-            shape_mask = np.rollaxis(s[0].numpy(), 2, 0)[0]
-            plt.imshow(shape_mask)
+    def _plot_original_data(self, wa, d, wi, r, c, s, save_output=False):
+        """
+        Plots the masks of the original data
 
-            gen_out = self.generator(data['shape_mask']).numpy()
-            gen_out = np.rollaxis(gen_out[0], 2, 0)
+        :param wa: Wall mask
+        :param d: Door mask
+        :param wi: Window mask
+        :param r: Room masks
+        :param c: Corner masks
+        :param s: Shape mask
+        :param save_output: True or False. When True a copy of the plot as an image is stored in
+        the output directory
+        """
 
-            fig = plt.figure(figsize=(8, 8))
-            fig.add_subplot(4, 4, 1)
-            plt.imshow(gen_out[0], cmap='hot', interpolation='nearest')
-            fig.add_subplot(4, 4, 2)
-            plt.imshow(gen_out[1], cmap='hot', interpolation='nearest')
-            fig.add_subplot(4, 4, 3)
-            plt.imshow(gen_out[2], cmap='hot', interpolation='nearest')
+        fig = plt.figure(figsize=(12, 12))
+        fig.add_subplot(6, 6, 1)
+        wall_mask = np.rollaxis(wa[0].numpy(), 2, 0)[0]
+        plt.imshow(wall_mask)
+        fig.add_subplot(6, 6, 2)
+        door_mask = np.rollaxis(d[0].numpy(), 2, 0)[0]
+        plt.imshow(door_mask)
+        fig.add_subplot(6, 6, 3)
+        window_mask = np.rollaxis(wi[0].numpy(), 2, 0)[0]
+        plt.imshow(window_mask)
 
-            for i in range(10):
-                fig.add_subplot(4, 4, i + 4)
-                plt.imshow(gen_out[i + 3], cmap='hot', interpolation='nearest')
+        for i in range(10):
+            target_numpy = np.rollaxis(r[0].numpy(), 2, 0)
+            fig.add_subplot(6, 6, i + 4)
+            plt.imshow(target_numpy[i])
 
-            plt.savefig('/home/harikatam/Pictures/' + get_timestamp() + '.png')
-            plt.show()
+        for i in range(17):
+            target_numpy = np.rollaxis(c[0].numpy(), 2, 0)
+            fig.add_subplot(6, 6, i + 14)
+            plt.imshow(target_numpy[i])
+
+        fig.add_subplot(6, 6, 31)
+        shape_mask = np.rollaxis(s[0].numpy(), 2, 0)[0]
+        plt.imshow(shape_mask)
+
+        if save_output:
+            plt.savefig(os.path.join(self.out_dir,get_timestamp() + '_original.png'))
+
+        plt.show()
+
+    def _plot_generated_data(self, s, save_output=True):
+
+        """
+        Plots the heatmap of the generated data for the given shape of the building
+
+        :param s: The shape mask for the generator
+        :param save_output: True or False. When True a copy of the plot as an image is stored in
+        the output directory
+        """
+
+        # wdw -> walls, doors, windows
+        # Get the output of the generator
+        wdw_gen_out, room_gen_out, corner_gen_out = self.generator(s)
+        wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
+        room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
+        corner_gen_out = np.rollaxis(corner_gen_out.numpy()[0], 2, 0)
+
+        fig = plt.figure(figsize=(10, 12))
+        fig.add_subplot(5, 6, 1)
+        plt.imshow(wdw_gen_out[0], cmap='hot', interpolation='nearest')
+        fig.add_subplot(5, 6, 2)
+        plt.imshow(wdw_gen_out[1], cmap='hot', interpolation='nearest')
+        fig.add_subplot(5, 6, 3)
+        plt.imshow(wdw_gen_out[2], cmap='hot', interpolation='nearest')
+
+        for i in range(10):
+            fig.add_subplot(5, 6, i + 4)
+            plt.imshow(room_gen_out[i], cmap='hot', interpolation='nearest')
+
+        for i in range(17):
+            fig.add_subplot(5, 6, i + 14)
+            plt.imshow(corner_gen_out[i], cmap='hot', interpolation='nearest')
+
+        plt.savefig(os.path.join(self.out_dir,get_timestamp() + '_generated.png'))
+        plt.show(block=True)
 
     @staticmethod
     def _mask_to_segmentation_image(mask):

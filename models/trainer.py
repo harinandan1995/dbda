@@ -52,9 +52,9 @@ class GANTrainer:
 
         train_dataset = self._get_training_dataset(batch_size, num_samples, shuffle)
 
-        generator = Generator(1, 13, load_gen_ckpt, self.width, self.height)
-        discriminator = Discriminator(1, 13, load_disc_path, self.width, self.height)
+        generator = Generator(1, [3, 10, 17], load_gen_ckpt, self.width, self.height)
         print(generator.summary())
+        discriminator = Discriminator(1, [3, 10, 17], load_disc_path, self.width, self.height)
         print(discriminator.summary())
 
         generator_optimizer, discriminator_optimizer = self._get_optimizers()
@@ -69,14 +69,11 @@ class GANTrainer:
 
             with summary_writer.as_default():
 
-                for step, data in enumerate(train_dataset):
-
-                    wa, d, wi = data['wall_mask'], data['door_mask'], data['window_mask']
-                    r, s = data['room_mask'], data['shape_mask']
+                for step, (wa, d, wi, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
 
                     gen_loss, disc_loss = self._train_step(
-                        generator, discriminator, wa, d, wi, r, s, generator_optimizer,
-                        discriminator_optimizer, coeff, step)
+                        generator, discriminator, wa, d, wi, r, c, s,
+                        generator_optimizer, discriminator_optimizer, coeff)
 
                     tf.summary.scalar('gen_loss', gen_loss, step)
                     tf.summary.scalar('disc_loss', disc_loss, step)
@@ -109,18 +106,22 @@ class GANTrainer:
             self._save_checkpoints(epoch, generator, discriminator)
 
     @staticmethod
-    def _train_step(generator, discriminator, walls, doors, windows, rooms, shape,
-                    generator_optimizer, discriminator_optimizer, coeff, step):
+    def _train_step(generator, discriminator, walls, doors, windows, rooms, corners, shape,
+                    generator_optimizer, discriminator_optimizer, coeff):
 
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            gen_output = generator(shape, training=True)
+            wdw_gen_out, room_gen_out, corner_gen_out = generator(shape, training=True)
 
-            target = tf.concat([walls, doors, windows, rooms], axis=3)
+            wdw_target = tf.concat([walls, doors, windows], axis=3)
+            room_target = rooms
+            corner_target = corners
 
-            disc_real_output = discriminator([shape, target], training=True)
-            disc_generated_output = discriminator([shape, gen_output], training=True)
+            disc_real_output = discriminator([shape, wdw_target, room_target, corner_target], training=True)
+            disc_generated_output = discriminator([shape, wdw_gen_out, room_gen_out, corner_gen_out], training=True)
 
-            gen_loss = generator_loss(disc_generated_output, gen_output, target, coeff)
+            gen_loss = generator_loss(disc_generated_output, wdw_gen_out, room_gen_out, corner_gen_out,
+                                      wdw_target, room_target, corner_target, coeff)
+
             disc_loss = discriminator_loss(disc_real_output, disc_generated_output)
 
         generator_gradients = gen_tape.gradient(gen_loss, generator.trainable_variables)

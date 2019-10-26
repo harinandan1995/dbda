@@ -1,6 +1,5 @@
 import cv2
 import h5py
-import tensorflow as tf
 from skimage import measure
 
 from utils.utils import *
@@ -8,18 +7,10 @@ from utils.utils import *
 
 class TransformerConfig:
 
-    def __init__(self,
-                 wall_thickness=3,
-                 window_thickness=2,
-                 door_thickness=2,
-                 inp_dir='../datasets/vectors',
-                 out_dir='../datasets/tfrecords',
-                 out_format='tfrecord',
-                 out_width=256,
-                 out_height=256,
-                 room_map=None,
-                 icon_map=None,
-                 color_map=None):
+    def __init__(self, wall_thickness=3, window_thickness=2, door_thickness=2,
+                 inp_dir='../datasets/vectors', out_dir='../datasets/tfrecords',
+                 out_format='tfrecord', out_width=256, out_height=256,
+                 room_map=None, icon_map=None, color_map=None):
 
         """
         Config for the vector to mask/image transformation
@@ -139,14 +130,30 @@ class VectorToImageTransformer:
 
             shape_mask = self._get_bounding_mask(walls)
             wall_mask = self._get_wall_mask(walls)
-            door_mask, window_mask = self._get_door_window_mask(windows, doors, shape_mask)
-            room_mask = self._get_room_mask(walls, rooms)
+            door_mask, window_mask, door_count, window_count = self._get_door_window_mask(windows, doors, shape_mask)
+            room_mask, room_types = self._get_room_mask(walls, rooms)
             corner_mask = self._get_corner_mask(doors, corners)
+
+            masks = {
+                'shape_mask': shape_mask,
+                'wall_mask': wall_mask,
+                'door_mask': door_mask,
+                'window_mask': window_mask,
+                'room_mask': room_mask,
+                'corner_mask': corner_mask,
+                'room_types': room_types
+            }
+
+            primitive_sizes = {
+                'wall_count': len(walls),
+                'door_count': door_count,
+                'window_count': window_count
+            }
 
             if self.out_format == 'h5':
                 self._store_as_h5(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, file_path)
             elif self.out_format == 'tfrecord':
-                self._store_as_tfrecord(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, file_path)
+                self._store_as_tfrecord(masks, primitive_sizes, file_path)
             elif self.out_format == 'png':
                 self._store_as_png(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, file_path)
 
@@ -160,32 +167,35 @@ class VectorToImageTransformer:
         return os.path.join(dir_3[1], dir_2[1], dir_1[1])
 
     @staticmethod
-    def _serialize_example_pyfunction(wall_mask, door_mask, window_mask, room_mask, corner_mask, bounding_mask):
+    def _serialize_example_pyfunction(masks, primitive_sizes):
 
         feature = {
-            'wall_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(wall_mask, (-1)))),
-            'door_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(door_mask, (-1)))),
-            'window_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(window_mask, (-1)))),
-            'room_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(room_mask, (-1)))),
-            'corner_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(corner_mask, (-1)))),
-            'bounding_mask': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(bounding_mask, (-1))))
+            'wall_mask': float_feature(np.reshape(masks['wall_mask'], (-1))),
+            'door_mask': float_feature(np.reshape(masks['door_mask'], (-1))),
+            'window_mask': float_feature(np.reshape(masks['window_mask'], (-1))),
+            'room_mask': float_feature(np.reshape(masks['room_mask'], (-1))),
+            'corner_mask': float_feature(np.reshape(masks['corner_mask'], (-1))),
+            'shape_mask': float_feature(np.reshape(masks['shape_mask'], (-1))),
+            'room_types': int64_feature(masks['room_types']),
+            'wall_count': int64_feature([primitive_sizes['wall_count']]),
+            'door_count': int64_feature([primitive_sizes['door_count']]),
+            'window_count': int64_feature([primitive_sizes['window_count']])
         }
 
         return tf.train.Example(features=tf.train.Features(feature=feature))
 
-    def _store_as_tfrecord(self, wall_mask, door_mask, window_mask, room_mask, corner_mask, bounding_mask, file_path):
+    def _store_as_tfrecord(self, masks, primitive_sizes, file_path):
 
         base_dir = os.path.join(self.out_dir, self._get_base_directory(file_path))
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
         out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0] + '.tfrecord')
-        
+
         print('Saving output at %s' % out_file_name)
-        
-        with tf.python_io.TFRecordWriter(out_file_name, 'GZIP') as writer:
-            example = self._serialize_example_pyfunction(wall_mask, door_mask, window_mask,
-                                                         room_mask, corner_mask, bounding_mask)
+
+        with tf.io.TFRecordWriter(out_file_name, 'GZIP') as writer:
+            example = self._serialize_example_pyfunction(masks, primitive_sizes)
             writer.write(example.SerializeToString())
 
         writer.close()
@@ -574,13 +584,18 @@ class VectorToImageTransformer:
         boundary = cv2.GaussianBlur(boundary, (11, 11), 0)
         boundary[boundary != 0] = 1
 
+        door_count = 0
+        window_count = 0
+
         for door in doors:
             if boundary[door[0][1]][door[0][0]] == 1 and boundary[door[1][1]][door[1][0]] == 1:
                 cv2.line(window_mask[0], door[0], door[1], color=1, thickness=self.config.window_thickness)
+                window_count += 1
             else:
                 cv2.line(door_mask[0], door[0], door[1], color=1, thickness=self.config.door_thickness)
+                door_count += 1
 
-        return door_mask, window_mask
+        return door_mask, window_mask, door_count, window_count
 
     def _get_door_mask(self, doors):
         """
@@ -639,7 +654,7 @@ class VectorToImageTransformer:
 
         for corner in all_corners:
 
-            mask[corner[2]][corner[1]][corner[0]] = 1
+            cv2.circle(mask[corner[2]], (corner[0], corner[1]), radius=1, color=1, thickness=3)
 
         return mask
 
@@ -659,8 +674,9 @@ class VectorToImageTransformer:
         # Makes the walls as the background
         room_segmentation = measure.label(room_segmentation == 0, background=0)
 
-        mask = np.zeros(((max(self.config.room_map.values()) - min(self.config.room_map.values()) + 1),
-                        self.out_height, self.out_width), dtype=np.uint8)
+        total_rooms = (max(self.config.room_map.values()) - min(self.config.room_map.values()) + 1)
+        mask = np.zeros((total_rooms, self.out_height, self.out_width), dtype=np.uint8)
+        room_types = np.zeros(total_rooms, dtype=np.uint8)
 
         for label, items in rooms.items():
 
@@ -668,8 +684,9 @@ class VectorToImageTransformer:
                 room_index = room_segmentation[(point[0][1] + point[1][1]) // 2][(point[0][0] + point[1][0]) // 2]
                 mask_index = self.config.room_map[label] - min(self.config.room_map.values())
                 mask[mask_index][room_segmentation == room_index] = 1
+                room_types[mask_index] = 1
 
-        return mask
+        return mask, room_types
 
     @staticmethod
     def _mask_to_segmentation_image(mask):

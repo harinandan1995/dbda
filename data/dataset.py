@@ -21,26 +21,13 @@ class FloorPlanDataset:
         self.data_type = data_type
         self.num_parallel_reads = num_parallel_reads
 
-    def generate_dataset(self, train_data_dir='train', max_samples=-1,
-                         include_walls=True, include_doors=True,
-                         include_windows=True, include_rooms=True,
-                         include_shape=True, include_corners=False):
-
-        if not (include_walls or include_doors or include_windows or
-                include_rooms or include_shape or include_corners):
-            raise AttributeError('At least one element should be included')
+    def generate_dataset(self, train_data_dir='train', max_samples=-1):
 
         if self.data_type == FloorPlanDataType.TFRECORD:
-            return self._get_dataset_from_tfrecord(os.path.join(self.data_dir, train_data_dir),
-                                                   max_samples, include_walls,
-                                                   include_doors, include_windows, include_rooms,
-                                                   include_shape, include_corners)
+            return self._get_dataset_from_tfrecord(os.path.join(self.data_dir, train_data_dir), max_samples)
 
         elif self.data_type == FloorPlanDataType.HDF5:
-            return self._get_dataset_from_h5(os.path.join(self.data_dir, train_data_dir),
-                                             max_samples, include_walls,
-                                             include_doors, include_windows, include_rooms,
-                                             include_shape, include_corners)
+            return self._get_dataset_from_h5(os.path.join(self.data_dir, train_data_dir), max_samples)
 
         else:
             raise AttributeError('Invalid value provided for data type. Allowed values: tfrecord, h5')
@@ -60,23 +47,16 @@ class FloorPlanDataset:
 
         return out_file_names
 
-    def _get_dataset_from_h5(self, data_dir, max_samples, include_walls, include_doors,
-                             include_windows, include_rooms, include_shape, include_corners):
+    def _get_dataset_from_h5(self, data_dir, max_samples):
 
         """
         Generates a tensorflow dataset from hdf5 files which contain walls, doors, windows, rooms, shape and corners
 
         :param data_dir: Path to directory where the hdf5 files are stored
         :param max_samples: Maximum number of samples to be loaded
-        :param include_walls: True if the final dataset should contain walls
-        :param include_doors: True if the final dataset should contain doors
-        :param include_windows: True if the final dataset should contain windows
-        :param include_rooms: True if the final dataset should contain rooms
-        :param include_shape: True if the final dataset should contain shape
-        :param include_corners: True if the final dataset should contain corners
         :return: Tensorflow dataset
         """
-        #TODO: This method is broken as of now, fix it
+        # TODO: This method is broken as of now, fix it
 
         dataset = None
 
@@ -97,15 +77,12 @@ class FloorPlanDataset:
                                                   f['bounding_mask'], f['corner_mask'])))
 
         dataset = dataset.map(
-            lambda data: self._transform_and_filter_masks(
-                data, include_walls, include_doors, include_windows,
-                include_rooms, include_shape, include_corners),
+            lambda data: self._transform_and_filter_masks(data),
             num_parallel_calls=self.num_parallel_reads)
 
         return dataset
 
-    def _get_dataset_from_tfrecord(self, data_dir, max_samples, include_walls, include_doors,
-                                   include_windows, include_rooms, include_shape, include_corners):
+    def _get_dataset_from_tfrecord(self, data_dir, max_samples):
 
         file_names = self._get_all_file_names(data_dir, FloorPlanDataType.TFRECORD.value, max_samples)
 
@@ -117,14 +94,13 @@ class FloorPlanDataset:
         dataset = dataset.map(self._parse_function, num_parallel_calls=self.num_parallel_reads)
 
         dataset = dataset.map(
-            lambda data: self._transform_and_filter_masks(
-                data, include_walls, include_doors, include_windows,
-                include_rooms, include_shape, include_corners),
+            lambda data: self._transform_and_filter_masks(data),
             num_parallel_calls=self.num_parallel_reads)
 
         return dataset
 
-    def _parse_function(self, example_proto):
+    @staticmethod
+    def _parse_function(example_proto):
 
         feature_description = {
             'wall_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
@@ -132,26 +108,32 @@ class FloorPlanDataset:
             'window_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'room_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'corner_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'bounding_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True)
+            'shape_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'room_types': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+            'wall_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+            'door_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+            'window_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True)
         }
 
         return tf.io.parse_single_example(example_proto, feature_description)
 
-    def _transform_and_filter_masks(self, data, include_walls, include_doors,
-                                    include_windows, include_rooms, include_shape, include_corners):
+    def _transform_and_filter_masks(self, data):
 
-        out = {}
-        if include_walls:
-            out['wall_mask'] = tf.reshape(data['wall_mask'], [self.width, self.height, 1])
-        if include_doors:
-            out['door_mask'] = tf.reshape(data['door_mask'], [self.width, self.height, 1])
-        if include_windows:
-            out['window_mask'] = tf.reshape(data['window_mask'], [self.width, self.height, 1])
-        if include_rooms:
-            out['room_mask'] = tf.transpose(tf.reshape(data['room_mask'], [10, self.width, self.height]), perm=[1, 2, 0])
-        if include_shape:
-            out['shape_mask'] = tf.reshape(data['bounding_mask'], [self.width, self.height, 1])
-        if include_corners:
-            out['corner_mask'] = tf.reshape(data['corner_mask'], [self.width, self.height, 17])
+        wall_mask = tf.reshape(data['wall_mask'], [self.width, self.height, 1])
+        door_mask = tf.reshape(data['door_mask'], [self.width, self.height, 1])
+        window_mask = tf.reshape(data['window_mask'], [self.width, self.height, 1])
+        room_mask = tf.transpose(tf.reshape(data['room_mask'], [10, self.width, self.height]),
+                                 perm=[1, 2, 0])
+        shape_mask = tf.reshape(data['shape_mask'], [self.width, self.height, 1])
 
-        return out
+        corner_mask = tf.transpose(tf.reshape(data['corner_mask'], [17, self.width, self.height]),
+                                   perm=[1, 2, 0])
+
+        room_types = tf.reshape(data['room_types'], [10])
+
+        wall_count = data['wall_count'][0]
+        door_count = data['door_count'][0]
+        window_count = data['window_count'][0]
+
+        return wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, room_types, \
+               wall_count, door_count, window_count

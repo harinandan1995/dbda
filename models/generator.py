@@ -30,8 +30,6 @@ class Generator(tf.keras.Model):
         up_stack = self._get_upsample_stack()
 
         initializer = tf.random_normal_initializer(0., 0.02)
-        last = tf.keras.layers.Conv2DTranspose(self.output_channels, 4, strides=2, padding='same',
-                                               kernel_initializer=initializer, activation='sigmoid')
 
         concat = tf.keras.layers.Concatenate()
 
@@ -52,35 +50,46 @@ class Generator(tf.keras.Model):
             x = up(x)
             x = concat([x, skip])
 
-        x = last(x)
+        wdw = tf.keras.layers.Conv2DTranspose(self.output_channels[0], 4, strides=2, padding='same',
+                                              kernel_initializer=initializer, activation='sigmoid')
 
-        return tf.keras.Model(inputs=inputs, outputs=x)
+        rooms = tf.keras.layers.Conv2DTranspose(self.output_channels[1], 4, strides=2, padding='same',
+                                                kernel_initializer=initializer, activation='sigmoid')
+
+        corners = tf.keras.layers.Conv2DTranspose(self.output_channels[2], 4, strides=2, padding='same',
+                                                  kernel_initializer=initializer, activation='sigmoid')
+
+        wdw_x = wdw(x)
+        rooms_x = rooms(x)
+        corners_x = corners(x)
+
+        return tf.keras.Model(inputs=inputs, outputs=[wdw_x, rooms_x, corners_x])
 
     @staticmethod
     def _get_downsample_stack():
 
         return [
-            ConvBlock(64, 4, 2, False, True),
+            ConvBlock(32, 4, 2, False, True),
+            ConvBlock(32, 4, 2, True, True),
             ConvBlock(64, 4, 2, True, True),
-            ConvBlock(128, 4, 2, True, True),
+            ConvBlock(64, 4, 2, True, False),
+            ConvBlock(64, 4, 2, True, False),
             ConvBlock(128, 4, 2, True, False),
             ConvBlock(128, 4, 2, True, False),
-            ConvBlock(256, 4, 2, True, False),
-            ConvBlock(256, 4, 2, True, False),
-            ConvBlock(256, 4, 2, True, False)
+            ConvBlock(128, 4, 2, True, False)
         ]
 
     @staticmethod
     def _get_upsample_stack():
 
         return [
-            ConvTransposeBlock(256, 4, 2, True, True),
-            ConvTransposeBlock(256, 4, 2, True, True),
-            ConvTransposeBlock(256, 4, 2, True, True),
-            ConvTransposeBlock(128, 4, 2, True, False),
-            ConvTransposeBlock(128, 4, 2, True, False),
+            ConvTransposeBlock(128, 4, 2, True, True),
+            ConvTransposeBlock(128, 4, 2, True, True),
+            ConvTransposeBlock(128, 4, 2, True, True),
             ConvTransposeBlock(64, 4, 2, True, False),
-            ConvTransposeBlock(64, 4, 2, True, False)
+            ConvTransposeBlock(64, 4, 2, True, False),
+            ConvTransposeBlock(32, 4, 2, True, False),
+            ConvTransposeBlock(32, 4, 2, True, False)
         ]
 
     def summary(self, line_length=None, positions=None, print_fn=None):

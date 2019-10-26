@@ -2,7 +2,7 @@ ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/datasets'
 ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/checkpoints'
 ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/summaries'
 
-rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=summaries --exclude=checkpoints "$3" ubuntu@"$1":/home/ubuntu
+rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=.git --exclude=datasets --exclude=summaries --exclude=checkpoints "$3" ubuntu@"$1":/home/ubuntu
 rsync -Pav -e "ssh -i $2" "$5" ubuntu@"$1":/ssdtemp/datasets
 
 ssh -i "$2" ubuntu@"$1" "bash /home/ubuntu/building-design-assistant/scripts/lrzsetup.sh"

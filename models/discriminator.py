@@ -27,19 +27,21 @@ class Discriminator(tf.keras.Model):
         initializer = tf.random_normal_initializer(0., 0.02)
 
         inp = tf.keras.layers.Input(shape=[self.height, self.width, self.inp_image_channels], name='input_image')
-        tar = tf.keras.layers.Input(shape=[self.height, self.width, self.tar_image_channels], name='target_image')
+        wdw_tar = tf.keras.layers.Input(shape=[self.height, self.width, self.tar_image_channels[0]], name='wdw_image')
+        room_tar = tf.keras.layers.Input(shape=[self.height, self.width, self.tar_image_channels[1]], name='room_image')
+        corner_tar = tf.keras.layers.Input(shape=[self.height, self.width, self.tar_image_channels[2]], name='corner_image')
 
-        x = tf.keras.layers.concatenate([inp, tar])
+        x = tf.keras.layers.concatenate([inp, wdw_tar, room_tar, corner_tar])
 
+        x = ConvBlock(32, 4, 2, False, True)(x)
+        x = ConvBlock(32, 4, 2, False, True)(x)
         x = ConvBlock(64, 4, 2, False, True)(x)
-        x = ConvBlock(128, 4, 2, False, True)(x)
-        x = ConvBlock(256, 4, 2, False, True)(x)
         x = tf.keras.layers.ZeroPadding2D()(x)
-        x = ConvBlock(512, 4, 1, True, False, padding='valid')(x)
+        x = ConvBlock(128, 4, 1, True, False, padding='valid')(x)
         x = tf.keras.layers.ZeroPadding2D()(x)
         x = tf.keras.layers.Conv2D(1, 4, strides=1, kernel_initializer=initializer)(x)
 
-        return tf.keras.Model(inputs=[inp, tar], outputs=x)
+        return tf.keras.Model(inputs=[inp, wdw_tar, room_tar, corner_tar], outputs=x)
 
     def summary(self, line_length=None, positions=None, print_fn=None):
 
@@ -53,4 +55,3 @@ class Discriminator(tf.keras.Model):
         if filepath is not None:
             print('Loading discriminator weights from %s' % filepath)
             self.model.load_weights(filepath)
-

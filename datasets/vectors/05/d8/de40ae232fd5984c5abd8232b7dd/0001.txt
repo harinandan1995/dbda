@@ -1,8 +1,0 @@
-98	107	148	140	cooking_counter	1	1	
-92	5	149	23	cooking_counter	1	1	
-68	120	88	141	washing_basin	1	1	
-7	43	54	76	entrance	1	1	
-40	119	57	138	washing_basin	1	1	
-8	83	148	112	cooking_counter	1	1	
-186.82695810565	61.674863387978	236.82695810565	81.674863387978	balcony	1	1	
-373	123.5	421.5	123.5	wall	1	1	
