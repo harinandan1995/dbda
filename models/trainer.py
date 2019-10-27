@@ -72,7 +72,7 @@ class GANTrainer:
                 for step, (wa, d, wi, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
 
                     gen_loss, disc_loss = self._train_step(
-                        generator, discriminator, wa, d, wi, r, c, s,
+                        generator, discriminator, wa, d, wi, r, c, s, rt, dc, wic,
                         generator_optimizer, discriminator_optimizer, coeff)
 
                     tf.summary.scalar('gen_loss', gen_loss, step)
@@ -84,7 +84,7 @@ class GANTrainer:
                     if step % 1 == 0:
                         print('Step %4f, Loss - Gen %.7f Disc %.7f' % (step, gen_loss, disc_loss))
 
-                    self.epoch_summary_writer.flush()
+                    summary_writer.flush()
 
             with self.epoch_summary_writer.as_default():
 
@@ -107,10 +107,12 @@ class GANTrainer:
 
     @staticmethod
     def _train_step(generator, discriminator, walls, doors, windows, rooms, corners, shape,
-                    generator_optimizer, discriminator_optimizer, coeff):
+                     room_type, door_count, window_count, generator_optimizer, discriminator_optimizer, coeff):
 
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            wdw_gen_out, room_gen_out, corner_gen_out = generator(shape, training=True)
+
+            count_input = tf.concat([room_type, door_count, window_count], axis=1)
+            wdw_gen_out, room_gen_out, corner_gen_out = generator([shape, count_input], training=True)
 
             wdw_target = tf.concat([walls, doors, windows], axis=3)
             room_target = rooms

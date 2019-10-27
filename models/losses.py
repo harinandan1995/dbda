@@ -38,6 +38,6 @@ def generator_loss(disc_generated_output, wdw_gen_out, room_gen_out, corner_gen_
     room_loss = gen_bce(room_target, room_gen_out)
     corner_loss = gen_bce(corner_target, corner_gen_out)
 
-    total_gen_loss = 0.1 * gan_loss + coeff * (wdw_loss + room_loss) + corner_loss
+    total_gen_loss = 0.01 * gan_loss + coeff * (wdw_loss + room_loss + corner_loss)
 
     return total_gen_loss

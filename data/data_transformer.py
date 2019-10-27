@@ -9,8 +9,8 @@ class TransformerConfig:
 
     def __init__(self, wall_thickness=3, window_thickness=2, door_thickness=2,
                  inp_dir='../datasets/vectors', out_dir='../datasets/tfrecords',
-                 out_format='tfrecord', out_width=256, out_height=256,
-                 room_map=None, icon_map=None, color_map=None):
+                 out_format='tfrecord', out_width=128, out_height=128,
+                 room_map=None, icon_map=None, color_map=None, corner_thickness=2):
 
         """
         Config for the vector to mask/image transformation
@@ -29,6 +29,7 @@ class TransformerConfig:
         self.wall_thickness = wall_thickness
         self.window_thickness = window_thickness
         self.door_thickness = door_thickness
+        self.corner_thickness = corner_thickness
         self.inp_dir = inp_dir
         self.out_dir = out_dir
         self.out_width = out_width
@@ -176,10 +177,10 @@ class VectorToImageTransformer:
             'room_mask': float_feature(np.reshape(masks['room_mask'], (-1))),
             'corner_mask': float_feature(np.reshape(masks['corner_mask'], (-1))),
             'shape_mask': float_feature(np.reshape(masks['shape_mask'], (-1))),
-            'room_types': int64_feature(masks['room_types']),
-            'wall_count': int64_feature([primitive_sizes['wall_count']]),
-            'door_count': int64_feature([primitive_sizes['door_count']]),
-            'window_count': int64_feature([primitive_sizes['window_count']])
+            'room_types': float_feature(masks['room_types']),
+            'wall_count': float_feature([primitive_sizes['wall_count']]),
+            'door_count': float_feature([primitive_sizes['door_count']]),
+            'window_count': float_feature([primitive_sizes['window_count']])
         }
 
         return tf.train.Example(features=tf.train.Features(feature=feature))
@@ -654,7 +655,8 @@ class VectorToImageTransformer:
 
         for corner in all_corners:
 
-            cv2.circle(mask[corner[2]], (corner[0], corner[1]), radius=1, color=1, thickness=3)
+            cv2.circle(mask[corner[2]], (corner[0], corner[1]),
+                       radius=1, color=1, thickness=self.config.corner_thickness)
 
         return mask
 

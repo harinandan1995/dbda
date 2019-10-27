@@ -4,53 +4,47 @@ from argparse import ArgumentParser
 from data.dataset import FloorPlanDataset, FloorPlanDataType
 from models.trainer import GANTrainer
 from utils.utils import set_gpu_growth
+from utils.config_parser import Config
 
 set_gpu_growth()
 
-parser = ArgumentParser()
-parser.add_argument("-i", "--data", help='Path to the directory where the data is stored',
-                    default='./datasets/tfrecords')
-parser.add_argument("-s", "--summary", help='Path to the directory where the summaries should be stored',
-                    default='./summaries')
-parser.add_argument("-c", "--ckpt", help='Path to the directory where the checkpoints should be stored',
-                    default='./checkpoints')
-parser.add_argument("-e", "--epochs", help='Path to the directory where the checkpoints should be stored',
-                    type=int, default=20)
-parser.add_argument("-b", "--batch", help='Path to the directory where the checkpoints should be stored',
-                    type=int, default=8)
+config = Config('./config/train.yaml')
 
-args = vars(parser.parse_args())
+# Data configs
+DATA_DIR = config.get_string('data', './datasets/tfrecords')
+WIDTH = config.get_int('width', 128)
+HEIGHT = config.get_int('height', 128)
+GEN_CKPT = config.get_string('gen_ckpt', '')
+DISC_CKPT = config.get_string('disc_ckpt', '')
+CKPT_DIR = config.get_string('ckpt_dir', './checkpoints')
+SUMMARY_DIR = config.get_string('summary_dir', './summaries')
 
-DATA_DIR = args['data']
-WIDTH = 256
-HEIGHT = 256
+# Hyper parameters
+EPOCHS = config.get_int('epochs', 2)
+BATCH_SIZE = config.get_int('batch_size', 8)
+NUM_SAMPLES = config.get_int('num_samples', 1000)
+GEN_LR = config.get_float('gen_lr')
+DISC_LR = config.get_float('disc_lr')
+COEFF = config.get_float('loss_coeff', 5)
 
 floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
                                       data_type=FloorPlanDataType.TFRECORD)
 
 dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 
-CKPT_DIR = './checkpoints/20191025/211207'
-GEN_CKPT = os.path.join(CKPT_DIR, 'gen_20191025_233943_22.h5')
-DISC_CKPT = os.path.join(CKPT_DIR, 'disc_20191025_233943_22.h5')
-
-gan_trainer = GANTrainer(dataset, WIDTH, HEIGHT, save_summary=True, summary_dir=args['summary'],
-                         save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir=args['ckpt'])
-
-EPOCHS = args['epochs']
-BATCH_SIZE = args['batch']
-NUM_SAMPLES = 5200
+gan_trainer = GANTrainer(dataset, WIDTH, HEIGHT, save_summary=True, summary_dir=SUMMARY_DIR,
+                         save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir=CKPT_DIR)
 
 gen_config = {
     'optimizer': 'adam',
-    'lr': 8e-4
+    'lr': GEN_LR
 }
 
 disc_config = {
     'optimizer': 'adam',
-    'lr': 4e-4
+    'lr': DISC_LR
 }
 
 gan_trainer.train(epochs=EPOCHS, batch_size=BATCH_SIZE, num_samples=NUM_SAMPLES,
-                  shuffle=False, coeff=5, load_gen_ckpt=None, load_disc_path=None,
+                  shuffle=False, coeff=COEFF, load_gen_ckpt=GEN_CKPT, load_disc_path=DISC_CKPT,
                   gen_config=gen_config, disc_config=disc_config)

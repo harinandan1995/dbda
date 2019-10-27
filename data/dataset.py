@@ -13,7 +13,8 @@ class FloorPlanDataType(Enum):
 
 class FloorPlanDataset:
 
-    def __init__(self, data_dir, width, height, data_type=FloorPlanDataType.TFRECORD, num_parallel_reads=2):
+    def __init__(self, data_dir, width, height,
+                 data_type=FloorPlanDataType.TFRECORD, num_parallel_reads=2):
 
         self.data_dir = data_dir
         self.width = width
@@ -109,10 +110,10 @@ class FloorPlanDataset:
             'room_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'corner_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'shape_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'room_types': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
-            'wall_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
-            'door_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
-            'window_count': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True)
+            'room_types': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'wall_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'door_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'window_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True)
         }
 
         return tf.io.parse_single_example(example_proto, feature_description)
@@ -131,9 +132,9 @@ class FloorPlanDataset:
 
         room_types = tf.reshape(data['room_types'], [10])
 
-        wall_count = data['wall_count'][0]
-        door_count = data['door_count'][0]
-        window_count = data['window_count'][0]
+        wall_count = data['wall_count']
+        door_count = data['door_count']
+        window_count = data['window_count']
 
         return wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, room_types, \
                wall_count, door_count, window_count

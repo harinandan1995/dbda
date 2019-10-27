@@ -2,26 +2,33 @@ from argparse import ArgumentParser
 
 from data.data_transformer import VectorToImageTransformer, TransformerConfig
 from utils.utils import set_gpu_growth
+from utils.config_parser import Config
 
 set_gpu_growth()
 
-parser = ArgumentParser()
-parser.add_argument("-i", "--input", help='Path to the directory where the data is stored',
-                    default='../public_datasets/vectors/')
-parser.add_argument("-o", "--output", help='Path to the directory where the data is stored',
-                    default='./datasets/tfrecords/train')
-parser.add_argument("-t", "--type", help='Type of the data (tfrecord or hdf5)',
-                    default='tfrecord')
-args = vars(parser.parse_args())
+config = Config('./config/transform.yaml')
 
-config = TransformerConfig(wall_thickness=3,
-                           window_thickness=3,
-                           door_thickness=3,
-                           inp_dir=args['input'],
-                           out_width=256,
-                           out_height=256,
-                           out_format=args['type'],
-                           out_dir=args['output'])
+IN_DIR = config.get_string('input_dir')
+OUT_DIR = config.get_string('output_dir')
+OUT_TYPE = config.get_string('output_type', 'tfrecord')
 
-vector_to_image_transformer = VectorToImageTransformer(config, num_images=6000)
+WIDTH = config.get_int('width', 128)
+HEIGHT = config.get_int('height', 128)
+WALL_THICKNESS = config.get_int('wall_thickness', 2)
+WINDOW_THICKNESS = config.get_int('window_thickness', 2)
+DOOR_THICKNESS = config.get_int('door_thickness', 2)
+CORNER_THICKNESS = config.get_int('corner_thickness', 2)
+NUM_OUTPUT_IMAGES = config.get_int('num_output_images', 1000)
+
+config = TransformerConfig(wall_thickness=WALL_THICKNESS,
+                           window_thickness=WINDOW_THICKNESS,
+                           door_thickness=DOOR_THICKNESS,
+                           corner_thickness=CORNER_THICKNESS,
+                           inp_dir=IN_DIR,
+                           out_width=WIDTH,
+                           out_height=HEIGHT,
+                           out_format=OUT_TYPE,
+                           out_dir=OUT_DIR)
+
+vector_to_image_transformer = VectorToImageTransformer(config, num_images=NUM_OUTPUT_IMAGES)
 vector_to_image_transformer.transform_vectors_to_images()

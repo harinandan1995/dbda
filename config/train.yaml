@@ -1,0 +1,15 @@
+{
+  'epochs': 40,
+  'batch_size': 32,
+  'gen_lr': 1e-3,
+  'disc_lr': 1e-4,
+  'loss_coeff': 10,
+  'num_samples': 7000,
+  'height': 128,
+  'width': 128,
+  'data': './datasets/128/tfrecords',
+  'ckpt_dir': './checkpoints',
+  'summary_dir': './summaries',
+  'gen_ckpt': './checkpoints/20191027/170154/gen_20191027_182620_39.h5',
+  'disc_ckpt': './checkpoints/20191027/170154/disc_20191027_182620_39.h5',
+}

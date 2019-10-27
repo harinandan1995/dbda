@@ -6,6 +6,7 @@ __pycache__/
 # Datasets checkpoints and summaries
 checkpoints/
 summaries/
+out/
 
 # PyCharm files
 .idea/

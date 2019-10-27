@@ -17,11 +17,9 @@ sudo apt-get install -y --no-install-recommends libnvinfer5=5.1.5-1+cuda10.0 \
     libnvinfer-dev=5.1.5-1+cuda10.0
 
 
+# Install necessary python and pip packages
+# Python3.7 is needed for tensorflow 2.0.0
 sudo apt install python3.7
-
-sudo apt-get update
-
-python3.7 -m pip --version
-
-python3.7 -m pip install -r /home/ubuntu/building-design-assistant/requirements.txt
-
+sudo apt install python3-pip
+sudo python3.7 -m pip install pip
+sudo python3.7 -m pip install -r /home/ubuntu/building-design-assistant/requirements.txt

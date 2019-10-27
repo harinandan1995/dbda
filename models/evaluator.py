@@ -1,10 +1,11 @@
 import os
 
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from models.generator import Generator
-from utils.utils import get_timestamp
+from utils.utils import get_timestamp, create_directory_if_not_exist
 
 
 class FloorPlanGenerator:
@@ -18,12 +19,14 @@ class FloorPlanGenerator:
     :param
     """
 
-    def __init__(self, dataset, gen_ckpt_path, out_dir='./out', width=256, height=256):
+    def __init__(self, dataset, gen_ckpt_path, out_dir='./out', width=128, height=128):
 
         self.dataset = dataset
         self.width = width
         self.height = height
         self.out_dir = out_dir
+
+        create_directory_if_not_exist(self.out_dir)
 
         self.generator = Generator(1, [3, 10, 17], gen_ckpt_path, width, height)
 
@@ -38,11 +41,9 @@ class FloorPlanGenerator:
             if index >= max_samples > 0:
                 return
 
-            print(wc, dc, wic)
-
             self._plot_original_data(wa, d, wi, r, c, s, save_output=False)
 
-            self._plot_generated_data(s, save_output=True)
+            self._plot_generated_data(s, rt, wc, dc, wic, save_output=True)
 
     def _plot_original_data(self, wa, d, wi, r, c, s, save_output=False):
         """
@@ -88,7 +89,7 @@ class FloorPlanGenerator:
 
         plt.show()
 
-    def _plot_generated_data(self, s, save_output=True):
+    def _plot_generated_data(self, s, rt, wc, dc, wic, save_output=True):
 
         """
         Plots the heatmap of the generated data for the given shape of the building
@@ -100,7 +101,8 @@ class FloorPlanGenerator:
 
         # wdw -> walls, doors, windows
         # Get the output of the generator
-        wdw_gen_out, room_gen_out, corner_gen_out = self.generator(s)
+        count_input = tf.concat([rt, dc, wic], axis=1)
+        wdw_gen_out, room_gen_out, corner_gen_out = self.generator([s, count_input])
         wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
         room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
         corner_gen_out = np.rollaxis(corner_gen_out.numpy()[0], 2, 0)

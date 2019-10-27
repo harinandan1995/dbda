@@ -1,0 +1,7 @@
+{
+  'height': 128,
+  'width': 128,
+  'num_samples': 10,
+  'data': './datasets/128/tfrecords',
+  'gen_ckpt': './checkpoints/20191027/170154/gen_20191027_182620_39.h5'
+}

@@ -1,0 +1,23 @@
+# input_dir: Path to the directory where the vector files are stored
+# output_dir: Path to the directory where the output files are to be stored.
+#             The directory is created if it doesnt exist
+# output_type: tfrecord or hdf5 or png. Type of the output you want to generate.
+#              tfrecords have only the masks of the floor plan
+#              hdf5 have masks and segmentation images
+#              png outputs only segmentation images
+# width: Width of the output
+# height: Height of the output
+# num_output_images: Maximum number of images to be transformed and stored
+
+{
+  'input_dir': '../public_datasets/vectors/',
+  'output_dir': './datasets/128/tfrecords',
+  'output_type': 'tfrecord' ,
+  'width': 128,
+  'height': 128,
+  'num_output_images': 10000,
+  'wall_thickness': 2,
+  'window_thickness': 2,
+  'door_thickness': 2,
+  'corner_thickness': 2
+}
