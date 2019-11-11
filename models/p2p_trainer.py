@@ -4,15 +4,16 @@ from models.losses import discriminator_loss, generator_loss
 from utils.utils import *
 
 
-class GANTrainer:
+class Pix2PixTrainer:
 
-    def __init__(self, dataset, width, height,
+    def __init__(self, dataset, width, height, latent_dim,
                  save_summary=True, summary_dir='./summaries',
                  save_gen_ckpt=True, save_disc_ckpt=True, ckpt_dir='./checkpoints'):
 
         self.dataset = dataset
         self.height = height
         self.width = width
+        self.latent_dim = latent_dim
 
         self.save_summary = save_summary
         self.summary_dir = os.path.join(summary_dir, get_day(), get_time())
@@ -52,7 +53,7 @@ class GANTrainer:
 
         train_dataset = self._get_training_dataset(batch_size, num_samples, shuffle)
 
-        generator = Generator(1, [3, 10, 17], load_gen_ckpt, self.width, self.height)
+        generator = Generator(1, [3, 10, 17], self.latent_dim, 12, load_gen_ckpt, self.width, self.height)
         print(generator.summary())
         discriminator = Discriminator(1, [3, 10, 17], load_disc_path, self.width, self.height)
         print(discriminator.summary())
@@ -105,14 +106,14 @@ class GANTrainer:
 
             self._save_checkpoints(epoch, generator, discriminator)
 
-    @staticmethod
-    def _train_step(generator, discriminator, walls, doors, windows, rooms, corners, shape,
+    def _train_step(self, generator, discriminator, walls, doors, windows, rooms, corners, shape,
                      room_type, door_count, window_count, generator_optimizer, discriminator_optimizer, coeff):
 
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
 
-            count_input = tf.concat([room_type, door_count, window_count], axis=1)
-            wdw_gen_out, room_gen_out, corner_gen_out = generator([shape, count_input], training=True)
+            meta_input = tf.concat([room_type, door_count, window_count], axis=1)
+            latent_code = tf.random.normal([meta_input.shape[0], self.latent_dim])
+            wdw_gen_out, room_gen_out, corner_gen_out = generator([shape, meta_input, latent_code], training=True)
 
             wdw_target = tf.concat([walls, doors, windows], axis=3)
             room_target = rooms

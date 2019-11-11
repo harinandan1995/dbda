@@ -1,4 +1,5 @@
 tensorflow-gpu
+tensorflow_probability
 scipy
 matplotlib
 ipython

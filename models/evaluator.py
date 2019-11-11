@@ -1,10 +1,12 @@
 import os
+import math
 
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from models.generator import Generator
+from models.losses import latent_reconstruction_loss
 from utils.utils import get_timestamp, create_directory_if_not_exist
 
 
@@ -19,16 +21,18 @@ class FloorPlanGenerator:
     :param
     """
 
-    def __init__(self, dataset, gen_ckpt_path, out_dir='./out', width=128, height=128):
+    def __init__(self, dataset, latent_dim, gen_ckpt_path, out_dir='./out', width=128, height=128):
 
         self.dataset = dataset
         self.width = width
         self.height = height
         self.out_dir = out_dir
+        self.latent_dim = latent_dim
 
         create_directory_if_not_exist(self.out_dir)
 
-        self.generator = Generator(1, [3, 10, 17], gen_ckpt_path, width, height)
+        self.latent_optimizer = tf.keras.optimizers.Adam(3e-2, beta_1=0.5)
+        self.generator = Generator(1, [3, 10, 17], self.latent_dim, 12, gen_ckpt_path, width, height)
 
     def evaluate(self, max_samples=10):
 
@@ -41,9 +45,9 @@ class FloorPlanGenerator:
             if index >= max_samples > 0:
                 return
 
-            self._plot_original_data(wa, d, wi, r, c, s, save_output=False)
+            self._plot_original_data(wa, d, wi, r, c, s, save_output=True)
 
-            self._plot_generated_data(s, rt, wc, dc, wic, save_output=True)
+            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=True)
 
     def _plot_original_data(self, wa, d, wi, r, c, s, save_output=False):
         """
@@ -89,7 +93,7 @@ class FloorPlanGenerator:
 
         plt.show()
 
-    def _plot_generated_data(self, s, rt, wc, dc, wic, save_output=True):
+    def _plot_generated_data(self, wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=True):
 
         """
         Plots the heatmap of the generated data for the given shape of the building
@@ -101,8 +105,18 @@ class FloorPlanGenerator:
 
         # wdw -> walls, doors, windows
         # Get the output of the generator
-        count_input = tf.concat([rt, dc, wic], axis=1)
-        wdw_gen_out, room_gen_out, corner_gen_out = self.generator([s, count_input])
+        meta_input = tf.concat([rt, dc, wic], axis=1)
+        wdw_target = tf.concat([wa, d, wi], axis=3)
+        room_target = r
+        corner_target = c
+
+        latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
+                                      trainable=True, validate_shape=True)
+
+        wdw_gen_out, room_gen_out, corner_gen_out = self._train_latent_variable(
+                        latent_variable, s, meta_input,
+                        wdw_target, room_target, corner_target, 200)
+
         wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
         room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
         corner_gen_out = np.rollaxis(corner_gen_out.numpy()[0], 2, 0)
@@ -125,6 +139,29 @@ class FloorPlanGenerator:
 
         plt.savefig(os.path.join(self.out_dir,get_timestamp() + '_generated.png'))
         plt.show(block=True)
+
+    def _train_latent_variable(self, latent_variable, shape, meta_input, wdw_target,
+                               room_target, corner_target, iterations):
+
+        for lat_step in range(iterations):
+
+            with tf.GradientTape() as latent_tape:
+
+                wdw_gen_out, room_gen_out, corner_gen_out = self.generator([shape, meta_input, latent_variable], training=False)
+                latent_loss = latent_reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
+                                                  wdw_target, room_target, corner_target)
+
+            latent_gradients = latent_tape.gradient(latent_loss, latent_variable)
+            self.latent_optimizer.apply_gradients(zip([latent_gradients], [latent_variable]))
+
+            latent_norm = tf.norm(latent_variable, axis=1, keepdims=True)
+            latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
+            latent_variable.assign(tf.divide(latent_variable, latent_norm)*math.sqrt(self.latent_dim))
+
+            if lat_step % 5 == 0 or lat_step + 1 == iterations:
+                print('Step %d Lat loss %f' % (lat_step + 1, latent_loss))
+
+        return wdw_gen_out, room_gen_out, corner_gen_out
 
     @staticmethod
     def _mask_to_segmentation_image(mask):

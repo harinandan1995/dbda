@@ -1,0 +1,15 @@
+{
+  'epochs': 500,
+  'batch_size': 128,
+  'gen_lr': 4e-4,
+  'disc_lr': 1e-4,
+  'loss_coeff': 50,
+  'num_samples': 7000,
+  'height': 128,
+  'width': 128,
+  'data': '/ssdtemp/datasets/tfrecords',
+  'ckpt_dir': '/ssdtemp/checkpoints',
+  'summary_dir': '/ssdtemp/summaries',
+  'gen_ckpt': '',
+  'disc_ckpt': '',
+}

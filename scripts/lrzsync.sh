@@ -2,10 +2,10 @@ ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/datasets'
 ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/checkpoints'
 ssh -i "$2" ubuntu@"$1" 'mkdir -p /ssdtemp/summaries'
 
-rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=.git --exclude=datasets --exclude=summaries --exclude=checkpoints "$3" ubuntu@"$1":/home/ubuntu
+rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=.git --exclude=datasets --exclude=summaries --exclude=checkpoints --exclude=out "$3" ubuntu@"$1":/ssdtemp/
 rsync -Pav -e "ssh -i $2" "$5" ubuntu@"$1":/ssdtemp/datasets
 
-ssh -i "$2" ubuntu@"$1" "bash /home/ubuntu/building-design-assistant/scripts/lrzsetup.sh"
+ssh -i "$2" ubuntu@"$1" "bash /ssdtemp/building-design-assistant/scripts/lrzsetup.sh"
 
 croncmd="bash $3/scripts/cron.sh $1 $2 $4> $4/out.log"
 cronjob="*/1 * * * * $croncmd"

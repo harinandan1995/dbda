@@ -1,15 +1,16 @@
 {
-  'epochs': 200,
+  'epochs': 100,
   'batch_size': 128,
-  'gen_lr': 8e-4,
-  'disc_lr': 4e-4,
-  'loss_coeff': 5,
-  'num_samples': 7000,
+  'gen_lr': 5e-4,
+  'lat_lr': 2e+2,
+  'latent_iterations': 20,
+  'generator_iterations': 2,
+  'num_samples': 5000,
   'height': 128,
   'width': 128,
+  'latent_dimensions': 16,
   'data': '/ssdtemp/datasets/tfrecords',
   'ckpt_dir': '/ssdtemp/checkpoints',
   'summary_dir': '/ssdtemp/summaries',
-  'gen_ckpt': '',
-  'disc_ckpt': '',
+  'gen_ckpt': ''
 }

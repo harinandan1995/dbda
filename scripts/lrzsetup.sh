@@ -1,4 +1,3 @@
-sudo dpkg -i /home/ubuntu/cuda-repo-ubuntu1804_10.0.130-1_amd64.deb
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
 sudo apt-get update
 wget http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/nvidia-machine-learning-repo-ubuntu1804_1.0.0-1_amd64.deb
@@ -19,7 +18,9 @@ sudo apt-get install -y --no-install-recommends libnvinfer5=5.1.5-1+cuda10.0 \
 
 # Install necessary python and pip packages
 # Python3.7 is needed for tensorflow 2.0.0
-sudo apt install python3.7
-sudo apt install python3-pip
+sudo apt install -y python3.7
+sudo apt install -y python3-pip
 sudo python3.7 -m pip install pip
-sudo python3.7 -m pip install -r /home/ubuntu/building-design-assistant/requirements.txt
+sudo python3.7 -m pip install -U pip
+sudo python3.7 -m pip install -U setuptools
+sudo python3.7 -m pip install -r /ssdtemp/building-design-assistant/requirements.txt

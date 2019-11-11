@@ -1,7 +1,7 @@
 {
   'height': 128,
   'width': 128,
-  'num_samples': 10,
+  'num_samples': 2,
   'data': './datasets/128/tfrecords',
-  'gen_ckpt': './checkpoints/20191027/170154/gen_20191027_182620_39.h5'
+  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20191109/181500/gen_20191110_005221_57.h5'
 }

@@ -87,6 +87,6 @@ class Config:
                 raise ValueError('Cannot convert type %s to int' % type(self.data[key]))
 
             try:
-                return str(default_value)
+                return int(default_value)
             except e:
                 raise ValueError('Cannot convert type %s to int' % type(default_value))

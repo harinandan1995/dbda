@@ -1,0 +1,16 @@
+{
+  'epochs': 20,
+  'batch_size': 64,
+  'gen_lr': 5e-4,
+  'lat_lr': 2e-2,
+  'latent_iterations': 15,
+  'generator_iterations': 5,
+  'num_samples': 5000,
+  'height': 128,
+  'width': 128,
+  'latent_dimensions': 32,
+  'data': './datasets/128/tfrecords',
+  'ckpt_dir': './checkpoints',
+  'summary_dir': './summaries',
+  'gen_ckpt': ''
+}

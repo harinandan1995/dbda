@@ -1,4 +1,6 @@
 import tensorflow as tf
+import tensorflow_probability as tfp
+tfd = tfp.distributions
 
 
 gen_bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
@@ -38,6 +40,39 @@ def generator_loss(disc_generated_output, wdw_gen_out, room_gen_out, corner_gen_
     room_loss = gen_bce(room_target, room_gen_out)
     corner_loss = gen_bce(corner_target, corner_gen_out)
 
-    total_gen_loss = 0.01 * gan_loss + coeff * (wdw_loss + room_loss + corner_loss)
+    total_gen_loss = 0.1 * gan_loss + coeff * (wdw_loss + room_loss + corner_loss)
 
     return total_gen_loss
+
+
+normal_dist = tfd.Normal(loc=0., scale=0.5)
+
+
+def latent_reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
+                               wdw_target, room_target, corner_target):
+
+    weights = normal_dist.prob(1 - shape) * 5
+    wdw_weights = normal_dist.prob(1 - tf.reduce_mean(wdw_target, 3, True)) * 10
+    corner_weights = normal_dist.prob(1 - tf.reduce_sum(corner_target, 3, True)) * 10
+
+    wdw_loss = gen_bce(wdw_target, wdw_gen_out, sample_weight=wdw_weights)
+    room_loss = gen_bce(room_target, room_gen_out, sample_weight=weights)
+    corner_loss = gen_bce(corner_target, corner_gen_out,
+                          sample_weight=corner_weights)
+
+    return 5 * wdw_loss + room_loss + 5 * corner_loss
+
+
+def reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
+                        wdw_target, room_target, corner_target):
+
+    weights = normal_dist.prob(1 - shape) * 5
+    wdw_weights = normal_dist.prob(1 - tf.reduce_mean(wdw_target, 3, True)) * 10
+    corner_weights = normal_dist.prob(1 - tf.reduce_sum(corner_target, 3, True)) * 10
+
+    wdw_loss = gen_bce(wdw_target, wdw_gen_out, sample_weight=wdw_weights)
+    room_loss = gen_bce(room_target, room_gen_out, sample_weight=weights)
+    corner_loss = gen_bce(corner_target, corner_gen_out,
+                          sample_weight=corner_weights)
+
+    return 5 * wdw_loss + room_loss + 5 * corner_loss
