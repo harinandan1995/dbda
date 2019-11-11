@@ -1,0 +1,8 @@
+numpy
+opencv-python
+PuLP
+scikit-image
+scipy
+
+
+# if merged with building-design : PulP
