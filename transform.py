@@ -19,6 +19,7 @@ WINDOW_THICKNESS = config.get_int('window_thickness', 2)
 DOOR_THICKNESS = config.get_int('door_thickness', 2)
 CORNER_THICKNESS = config.get_int('corner_thickness', 2)
 NUM_OUTPUT_IMAGES = config.get_int('num_output_images', 1000)
+SHUFFLE = config.get_bool('shuffle', True)
 
 config = TransformerConfig(wall_thickness=WALL_THICKNESS,
                            window_thickness=WINDOW_THICKNESS,
@@ -30,5 +31,7 @@ config = TransformerConfig(wall_thickness=WALL_THICKNESS,
                            out_format=OUT_TYPE,
                            out_dir=OUT_DIR)
 
-vector_to_image_transformer = VectorToImageTransformer(config, num_images=NUM_OUTPUT_IMAGES)
+vector_to_image_transformer = VectorToImageTransformer(
+                                    config, num_images=NUM_OUTPUT_IMAGES,
+                                    shuffle=SHUFFLE)
 vector_to_image_transformer.transform_vectors_to_images()

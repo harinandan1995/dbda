@@ -10,14 +10,15 @@
 # num_output_images: Maximum number of images to be transformed and stored
 
 {
-  'input_dir': '../public_datasets/vectors/',
-  'output_dir': './datasets/128/tfrecords',
-  'output_type': 'tfrecord' ,
+  'input_dir': '../public_datasets/vectors',
+  'output_dir': './datasets/128/png',
+  'output_type': 'png' ,
   'width': 128,
   'height': 128,
-  'num_output_images': 10000,
+  'num_output_images': 5,
   'wall_thickness': 2,
   'window_thickness': 2,
   'door_thickness': 2,
-  'corner_thickness': 2
+  'corner_thickness': 2,
+  'shuffle': 'True'
 }

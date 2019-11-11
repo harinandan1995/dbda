@@ -90,3 +90,26 @@ class Config:
                 return int(default_value)
             except e:
                 raise ValueError('Cannot convert type %s to int' % type(default_value))
+
+    def get_bool(self, key, default_value=None):
+
+        """
+        Used to get a int parameter from the config
+
+        :param key: Value of this key will be returned from the config
+        :param default_value: Default value if the given key is not found in the config
+        """
+
+        if key not in self.data and default_value is None:
+            raise AttributeError('%s not found in the config and not default value provided' % key)
+        else:
+            try:
+                if key in self.data:
+                    return self.data[key] in ['True', 'true', '1', 't', 'y', 'yes']
+            except e:
+                raise ValueError('Cannot convert type %s to int' % type(self.data[key]))
+
+            try:
+                return default_value in ['True', 'true', '1', 't', 'y', 'yes']
+            except e:
+                raise ValueError('Cannot convert type %s to int' % type(default_value))

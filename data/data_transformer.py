@@ -1,6 +1,8 @@
 import cv2
 import h5py
+import glob
 from skimage import measure
+from random import shuffle
 
 from utils.utils import *
 
@@ -49,7 +51,7 @@ class TransformerConfig:
         self.label_map = self._load_default_label_map()
 
         if color_map is None:
-            self.color_map = self._load_default_label_map()
+            self.color_map = self._load_default_color_map()
         else:
             self.color_map = color_map
 
@@ -91,15 +93,15 @@ class TransformerConfig:
     # Loads random colors for rooms and icons
     def _load_default_color_map(self):
 
-        num_colors = len(self.icon_map) + len(self.room_map)
+        num_colors = max(len(self.icon_map), len(self.room_map), 17)
         colors = np.random.randint(255, size=(num_colors, 3))
 
-        return dict(zip(self.room_map.keys() + self.icon_map.keys(), colors))
+        return colors
 
 
 class VectorToImageTransformer:
 
-    def __init__(self, config, num_images=-1):
+    def __init__(self, config, shuffle=False, num_images=-1):
 
         self.config = config
         self.inp_dir = config.inp_dir
@@ -108,6 +110,8 @@ class VectorToImageTransformer:
         self.wall_thickness = config.wall_thickness
         self.out_width = config.out_width
         self.out_height = config.out_height
+        self.colors = self.config.color_map
+        self.shuffle = shuffle
 
         create_directory_if_not_exist(self.out_dir)
 
@@ -118,9 +122,12 @@ class VectorToImageTransformer:
 
         for index, file_path in enumerate(self.file_paths):
 
-            print('Transforming %d th file, location: %s' % (index, file_path))
-
             walls, wall_types, doors, windows, rooms, icons, max_x, max_y, min_x, min_y = self._load_semantics(file_path)
+
+            if not self._is_valid(rooms, icons):
+                continue
+
+            print('Transforming %d th file, location: %s' % (index, file_path))
 
             walls = self._filter_walls(walls, wall_types)
 
@@ -134,6 +141,7 @@ class VectorToImageTransformer:
             door_mask, window_mask, door_count, window_count = self._get_door_window_mask(windows, doors, shape_mask)
             room_mask, room_types = self._get_room_mask(walls, rooms)
             corner_mask = self._get_corner_mask(doors, corners)
+            entrance_mask = self._get_icon_mask(icons)
 
             masks = {
                 'shape_mask': shape_mask,
@@ -142,7 +150,8 @@ class VectorToImageTransformer:
                 'window_mask': window_mask,
                 'room_mask': room_mask,
                 'corner_mask': corner_mask,
-                'room_types': room_types
+                'room_types': room_types,
+                'entrance_mask': entrance_mask
             }
 
             primitive_sizes = {
@@ -152,11 +161,11 @@ class VectorToImageTransformer:
             }
 
             if self.out_format == 'h5':
-                self._store_as_h5(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, file_path)
+                self._store_as_h5(masks, file_path)
             elif self.out_format == 'tfrecord':
                 self._store_as_tfrecord(masks, primitive_sizes, file_path)
             elif self.out_format == 'png':
-                self._store_as_png(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, file_path)
+                self._store_as_png(masks, file_path)
 
     @staticmethod
     def _get_base_directory(file_path):
@@ -201,7 +210,7 @@ class VectorToImageTransformer:
 
         writer.close()
 
-    def _store_as_png(self, wall_mask, door_mask, window_mask, room_mask, corner_mask, bounding_mask, file_path):
+    def _store_as_png(self, masks, file_path):
         """
         Stores the segmentation images as png
         :param wall_mask: Wall mask
@@ -219,19 +228,21 @@ class VectorToImageTransformer:
 
         out_file_prefix = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0])
 
-        cv2.imwrite(out_file_prefix + '_wall.png', self._mask_to_segmentation_image(wall_mask))
+        cv2.imwrite(out_file_prefix + '_wall.png', self._mask_to_segmentation_image(masks['wall_mask']))
 
-        cv2.imwrite(out_file_prefix + '_window.png', self._mask_to_segmentation_image(window_mask))
+        cv2.imwrite(out_file_prefix + '_window.png', self._mask_to_segmentation_image(masks['window_mask']))
 
-        cv2.imwrite(out_file_prefix + '_door.png', self._mask_to_segmentation_image(door_mask))
+        cv2.imwrite(out_file_prefix + '_door.png', self._mask_to_segmentation_image(masks['door_mask']))
 
-        cv2.imwrite(out_file_prefix + '_room.png', self._mask_to_segmentation_image(room_mask))
+        cv2.imwrite(out_file_prefix + '_room.png', self._mask_to_segmentation_image(masks['room_mask']))
 
-        cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(corner_mask))
+        cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(masks['corner_mask']))
 
-        cv2.imwrite(out_file_prefix + '_bounding.png', self._mask_to_segmentation_image(bounding_mask))
+        cv2.imwrite(out_file_prefix + '_shape.png', self._mask_to_segmentation_image(masks['shape_mask']))
 
-    def _store_as_h5(self, wall_mask, door_mask, window_mask, room_mask, corner_mask, bounding_mask, file_path):
+        cv2.imwrite(out_file_prefix + '_entrance.png', self._mask_to_segmentation_image(masks['entrance_mask']))
+
+    def _store_as_h5(self, masks, file_path):
         """
         Stores the masks and segmentation images into h5py files
         :param wall_mask: Wall mask
@@ -249,34 +260,35 @@ class VectorToImageTransformer:
         out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0]+'.h5py')
 
         h5f = h5py.File(out_file_name, 'w')
-        h5f.create_dataset('wall_mask', data=wall_mask)
-        h5f.create_dataset('door_mask', data=door_mask)
-        h5f.create_dataset('window_mask', data=window_mask)
-        h5f.create_dataset('room_mask', data=room_mask)
-        h5f.create_dataset('corner_mask', data=corner_mask)
-        h5f.create_dataset('bounding_mask', data=bounding_mask)
+        h5f.create_dataset('wall_mask', data=masks['wall_mask'])
+        h5f.create_dataset('door_mask', data=masks['door_mask'])
+        h5f.create_dataset('window_mask', data=masks['window_mask'])
+        h5f.create_dataset('room_mask', data=masks['room_mask'])
+        h5f.create_dataset('corner_mask', data=masks['corner_mask'])
+        h5f.create_dataset('shape_mask', data=masks['shape_mask'])
+        h5f.create_dataset('entrance_mask', data=masks['entrance_mask'])
 
-        h5f.create_dataset('wall_seg', data=self._mask_to_segmentation_image(wall_mask))
-        h5f.create_dataset('door_seg', data=self._mask_to_segmentation_image(door_mask))
-        h5f.create_dataset('window_seg', data=self._mask_to_segmentation_image(window_mask))
-        h5f.create_dataset('room_seg', data=self._mask_to_segmentation_image(room_mask))
-        h5f.create_dataset('corner_seg', data=self._mask_to_segmentation_image(corner_mask))
-        h5f.create_dataset('bounding_seg', data=self._mask_to_segmentation_image(bounding_mask))
+        h5f.create_dataset('wall_seg', data=self._mask_to_segmentation_image(masks['wall_mask']))
+        h5f.create_dataset('door_seg', data=self._mask_to_segmentation_image(masks['door_mask']))
+        h5f.create_dataset('window_seg', data=self._mask_to_segmentation_image(masks['window_mask']))
+        h5f.create_dataset('room_seg', data=self._mask_to_segmentation_image(masks['room_mask']))
+        h5f.create_dataset('corner_seg', data=self._mask_to_segmentation_image(masks['corner_mask']))
+        h5f.create_dataset('shape_seg', data=self._mask_to_segmentation_image(masks['shape_mask']))
+        h5f.create_dataset('entrance_seg', data=self._mask_to_segmentation_image(masks['entrance_mask']))
 
         h5f.close()
 
     def _get_file_paths(self, num_images):
 
-        file_paths = []
+        file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
 
-        for r, d, f in os.walk(self.inp_dir):
-            for file in f:
-                if os.path.splitext(file)[1] == '.txt':
-                    file_paths.append(os.path.join(r, file))
-            if len(file_paths) == num_images:
-                return file_paths
-
-        return file_paths
+        if len(file_paths) < num_images:
+            return file_paths
+        else:
+            if self.shuffle:
+                shuffle(file_paths)
+            file_paths = file_paths[:num_images]
+            return file_paths
 
     def _load_semantics(self, file_path):
 
@@ -324,6 +336,13 @@ class VectorToImageTransformer:
                             (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
 
         return walls, wall_types, doors, windows, rooms, icons, max(x), max(y), min(x), min(y)
+
+    def _is_valid(self, rooms, icons):
+
+        if 'stairs' in icons or 'entrance' not in icons:
+            return False
+
+        return True
 
     def _filter_walls(self, walls, wall_types):
         invalid_indices = {}
@@ -634,7 +653,15 @@ class VectorToImageTransformer:
 
     def _get_icon_mask(self, icons):
 
-        return None
+        mask = np.zeros((1, self.out_height, self.out_width), dtype=np.uint8)
+
+        if 'entrance' not in icons:
+            return mask
+
+        for icon in icons['entrance']:
+            cv2.rectangle(mask[0], icon[0], icon[1], color=1, thickness=self.config.wall_thickness)
+
+        return mask
 
     def _get_corner_mask(self, doors, corners):
         all_corners = []
@@ -690,8 +717,7 @@ class VectorToImageTransformer:
 
         return mask, room_types
 
-    @staticmethod
-    def _mask_to_segmentation_image(mask):
+    def _mask_to_segmentation_image(self, mask):
         """
         Converts a mask image with dimensions HxWxC into a segmentation image with C labels
 
@@ -699,7 +725,12 @@ class VectorToImageTransformer:
         :return: A segmentation image with C labels
         """
         num_colors = mask.shape[0]
-        colors = np.random.randint(255, size=(num_colors, 3))
+        if num_colors == 1:
+            colors = [0]
+        else:
+            colors = self.colors
+
+        # print(self.colors, num_colors)
 
         segmentation_image = 255 * np.ones((mask.shape[1], mask.shape[2], 3), np.uint8)
 
