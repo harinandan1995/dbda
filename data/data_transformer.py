@@ -116,6 +116,7 @@ class VectorToImageTransformer:
         create_directory_if_not_exist(self.out_dir)
 
         self.file_paths = self._get_file_paths(num_images)
+        print(len(self.file_paths))
         self.num_images = len(self.file_paths)
 
     def transform_vectors_to_images(self):
@@ -129,29 +130,29 @@ class VectorToImageTransformer:
 
             print('Transforming %d th file, location: %s' % (index, file_path))
 
+            walls, doors, windows, rooms, icons = self._transform_points(walls, doors, windows, rooms, icons,
+                                                                         max_x, max_y, min_x, min_y)
+
             walls = self._filter_walls(walls, wall_types)
 
             corners, success = self._lines_2_corners(walls, gap=self.config.wall_thickness)
 
-            walls, doors, windows, rooms, icons, corners = self._transform_points(walls, doors, windows, rooms, icons,
-                                                                                  corners, max_x, max_y, min_x, min_y)
-
             shape_mask = self._get_bounding_mask(walls)
             wall_mask = self._get_wall_mask(walls)
             door_mask, window_mask, door_count, window_count = self._get_door_window_mask(windows, doors, shape_mask)
-            room_mask, room_types = self._get_room_mask(walls, rooms)
+            room_mask, room_types = self._get_room_mask(walls, rooms, shape_mask)
             corner_mask = self._get_corner_mask(doors, corners)
             entrance_mask = self._get_icon_mask(icons)
 
             masks = {
-                'shape_mask': shape_mask,
                 'wall_mask': wall_mask,
                 'door_mask': door_mask,
                 'window_mask': window_mask,
+                'entrance_mask': entrance_mask,
                 'room_mask': room_mask,
+                'shape_mask': shape_mask,
                 'corner_mask': corner_mask,
-                'room_types': room_types,
-                'entrance_mask': entrance_mask
+                'room_types': room_types
             }
 
             primitive_sizes = {
@@ -183,6 +184,7 @@ class VectorToImageTransformer:
             'wall_mask': float_feature(np.reshape(masks['wall_mask'], (-1))),
             'door_mask': float_feature(np.reshape(masks['door_mask'], (-1))),
             'window_mask': float_feature(np.reshape(masks['window_mask'], (-1))),
+            'entrance_mask': float_feature(np.reshape(masks['entrance_mask'], (-1))),
             'room_mask': float_feature(np.reshape(masks['room_mask'], (-1))),
             'corner_mask': float_feature(np.reshape(masks['corner_mask'], (-1))),
             'shape_mask': float_feature(np.reshape(masks['shape_mask'], (-1))),
@@ -229,18 +231,12 @@ class VectorToImageTransformer:
         out_file_prefix = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0])
 
         cv2.imwrite(out_file_prefix + '_wall.png', self._mask_to_segmentation_image(masks['wall_mask']))
-
         cv2.imwrite(out_file_prefix + '_window.png', self._mask_to_segmentation_image(masks['window_mask']))
-
-        cv2.imwrite(out_file_prefix + '_door.png', self._mask_to_segmentation_image(masks['door_mask']))
-
-        cv2.imwrite(out_file_prefix + '_room.png', self._mask_to_segmentation_image(masks['room_mask']))
-
-        cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(masks['corner_mask']))
-
-        cv2.imwrite(out_file_prefix + '_shape.png', self._mask_to_segmentation_image(masks['shape_mask']))
-
         cv2.imwrite(out_file_prefix + '_entrance.png', self._mask_to_segmentation_image(masks['entrance_mask']))
+        cv2.imwrite(out_file_prefix + '_door.png', self._mask_to_segmentation_image(masks['door_mask']))
+        cv2.imwrite(out_file_prefix + '_room.png', self._mask_to_segmentation_image(masks['room_mask']))
+        cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(masks['corner_mask']))
+        cv2.imwrite(out_file_prefix + '_shape.png', self._mask_to_segmentation_image(masks['shape_mask']))
 
     def _store_as_h5(self, masks, file_path):
         """
@@ -263,24 +259,26 @@ class VectorToImageTransformer:
         h5f.create_dataset('wall_mask', data=masks['wall_mask'])
         h5f.create_dataset('door_mask', data=masks['door_mask'])
         h5f.create_dataset('window_mask', data=masks['window_mask'])
+        h5f.create_dataset('entrance_mask', data=masks['entrance_mask'])
         h5f.create_dataset('room_mask', data=masks['room_mask'])
         h5f.create_dataset('corner_mask', data=masks['corner_mask'])
         h5f.create_dataset('shape_mask', data=masks['shape_mask'])
-        h5f.create_dataset('entrance_mask', data=masks['entrance_mask'])
 
         h5f.create_dataset('wall_seg', data=self._mask_to_segmentation_image(masks['wall_mask']))
         h5f.create_dataset('door_seg', data=self._mask_to_segmentation_image(masks['door_mask']))
         h5f.create_dataset('window_seg', data=self._mask_to_segmentation_image(masks['window_mask']))
+        h5f.create_dataset('entrance_seg', data=self._mask_to_segmentation_image(masks['entrance_mask']))
         h5f.create_dataset('room_seg', data=self._mask_to_segmentation_image(masks['room_mask']))
         h5f.create_dataset('corner_seg', data=self._mask_to_segmentation_image(masks['corner_mask']))
         h5f.create_dataset('shape_seg', data=self._mask_to_segmentation_image(masks['shape_mask']))
-        h5f.create_dataset('entrance_seg', data=self._mask_to_segmentation_image(masks['entrance_mask']))
 
         h5f.close()
 
     def _get_file_paths(self, num_images):
 
         file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
+
+        # file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/06/d6/fe932a20fc0aa3f7415811dd1ce6/0004.txt']
 
         if len(file_paths) < num_images:
             return file_paths
@@ -344,19 +342,40 @@ class VectorToImageTransformer:
 
         return True
 
+    def _check_if_walls_touch(self, wall_1, wall_2):
+
+        direction = calc_line_direction(wall_2)
+        if (calc_line_direction(wall_1) == calc_line_direction(wall_2)):
+            if l2l_distance(wall_1, wall_2) <= 2 * self.wall_thickness:
+                if direction == 0:
+                    if (min(wall_1[0][0], wall_1[1][0]) >= max(wall_2[0][0], wall_2[1][0])) or (min(wall_2[0][0], wall_2[1][0]) >= max(wall_1[0][0], wall_1[1][0])):
+                        return False
+                    else:
+                        return True
+                else:
+                    if (min(wall_1[0][1], wall_1[1][1]) >= max(wall_2[0][1], wall_2[1][1])) or (min(wall_2[0][1], wall_2[1][1]) >= max(wall_1[0][1], wall_1[1][1])):
+                        return False
+                    else:
+                        return True
+        return False
+
     def _filter_walls(self, walls, wall_types):
         invalid_indices = {}
         for wall_index_1, (wall_1, wall_type_1) in enumerate(zip(walls, wall_types)):
             for wall_index_2, (wall_2, wall_type_2) in enumerate(zip(walls, wall_types)):
+                if wall_index_1 in invalid_indices or wall_index_2 in invalid_indices:
+                    continue
+                if self._check_if_walls_touch(wall_1, wall_2) and wall_index_1 < wall_index_2:
+
+                    walls[wall_index_1] = merge_lines(wall_1, wall_2)
+                    invalid_indices[wall_index_2] = True
+
                 if wall_type_1 == 0 and wall_type_2 == 1 and calc_line_direction(wall_1) == calc_line_direction(wall_2):
                     if min([p2p_distance(wall_1[c_1], wall_2[c_2]) for c_1, c_2 in
                             [(0, 0), (0, 1), (1, 0), (1, 1)]]) <= self.config.wall_thickness * 2:
                         walls[wall_index_1] = merge_lines(wall_1, wall_2)
                         invalid_indices[wall_index_2] = True
-                        pass
-                    pass
-                continue
-            continue
+
         return [wall for wall_index, wall in enumerate(walls) if wall_index not in invalid_indices]
 
     @staticmethod
@@ -474,7 +493,18 @@ class VectorToImageTransformer:
         return int(scale_factor * (point[0] + tx_before) + tx_after), \
                int(scale_factor * (point[1] + ty_before) + ty_after)
 
-    def _transform_points(self, walls, doors, windows, rooms, icons, corners, max_x, max_y, min_x, min_y):
+    def transform_walls(self, walls, max_x, max_y, min_x, min_y):
+        tx_before = -min_x
+        ty_before = -min_y
+
+        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.95
+
+        tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
+        ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
+
+        return [[self._augment_point(wall[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for wall in walls]
+
+    def _transform_points(self, walls, doors, windows, rooms, icons, max_x, max_y, min_x, min_y):
         """
         Scales the points to fit into out_width, out_height
         Translates the points to the center of the output image
@@ -494,7 +524,6 @@ class VectorToImageTransformer:
         tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
         ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
 
-        corners = [(self._augment_point(corner[0], sf, tx_before, ty_before, tx_after, ty_after), corner[1]) for corner in corners]
         walls = [[self._augment_point(wall[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for wall in walls]
         doors = [[self._augment_point(door[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for door in doors]
         windows = [[self._augment_point(window[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for window in windows]
@@ -504,7 +533,7 @@ class VectorToImageTransformer:
         for label, items in rooms.items():
             rooms[label] = [[self._augment_point(item[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for item in items]
 
-        return walls, doors, windows, rooms, icons, corners
+        return walls, doors, windows, rooms, icons
 
     def _augment_sample(self, image, background_colors=[], split='train'):
 
@@ -687,7 +716,7 @@ class VectorToImageTransformer:
 
         return mask
 
-    def _get_room_mask(self, walls, rooms):
+    def _get_room_mask(self, walls, rooms, shape_mask):
         """
         Gets the room masks for each type of room
 
@@ -696,12 +725,12 @@ class VectorToImageTransformer:
         :return: Image mask for all the types of rooms
         """
         # Draws lines where walls are
-        room_segmentation = np.zeros((self.out_height, self.out_width), dtype=np.uint8)
+        wall_mask = shape_mask[0].copy()
         for line in walls:
-            cv2.line(room_segmentation, line[0], line[1], color=128, thickness=self.config.wall_thickness)
+            cv2.line(wall_mask, line[0], line[1], color=128, thickness=self.config.wall_thickness)
 
         # Makes the walls as the background
-        room_segmentation = measure.label(room_segmentation == 0, background=0)
+        room_segmentation = measure.label(wall_mask == 1, background=0)
 
         total_rooms = (max(self.config.room_map.values()) - min(self.config.room_map.values()) + 1)
         mask = np.zeros((total_rooms, self.out_height, self.out_width), dtype=np.uint8)
@@ -711,6 +740,8 @@ class VectorToImageTransformer:
 
             for point in items:
                 room_index = room_segmentation[(point[0][1] + point[1][1]) // 2][(point[0][0] + point[1][0]) // 2]
+                if room_index == 0:
+                    continue
                 mask_index = self.config.room_map[label] - min(self.config.room_map.values())
                 mask[mask_index][room_segmentation == room_index] = 1
                 room_types[mask_index] = 1

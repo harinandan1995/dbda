@@ -1,8 +1,10 @@
 import datetime
 import os
 import time
+import sys
 
 import numpy as np
+np.set_printoptions(threshold=sys.maxsize)
 import tensorflow as tf
 
 
@@ -29,6 +31,18 @@ def get_timestamp():
 def p2p_distance(point_1, point_2):
 
     return max(abs(point_1[0] - point_2[0]), abs(point_1[1] - point_2[1]))
+
+
+def l2l_distance(line_1, line_2):
+
+    line_1_direction = calc_line_direction(line_1)
+    line_2_direction = calc_line_direction(line_2)
+    assert(line_1_direction == line_2_direction)
+
+    if line_1_direction == 0:
+        return abs(line_1[0][1] - line_2[0][1])
+    else:
+        return abs(line_1[0][0] - line_2[0][0])
 
 
 def calc_line_direction(line):

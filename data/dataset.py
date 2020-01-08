@@ -107,6 +107,7 @@ class FloorPlanDataset:
             'wall_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'door_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'window_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'entrance_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'room_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'corner_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'shape_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
@@ -123,6 +124,7 @@ class FloorPlanDataset:
         wall_mask = tf.reshape(data['wall_mask'], [self.width, self.height, 1])
         door_mask = tf.reshape(data['door_mask'], [self.width, self.height, 1])
         window_mask = tf.reshape(data['window_mask'], [self.width, self.height, 1])
+        entrance_mask = tf.reshape(data['entrance_mask'], [self.width, self.height, 1])
         room_mask = tf.transpose(tf.reshape(data['room_mask'], [10, self.width, self.height]),
                                  perm=[1, 2, 0])
         shape_mask = tf.reshape(data['shape_mask'], [self.width, self.height, 1])
@@ -136,5 +138,5 @@ class FloorPlanDataset:
         door_count = data['door_count']
         window_count = data['window_count']
 
-        return wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, room_types, \
+        return wall_mask, door_mask, window_mask, entrance_mask, room_mask, corner_mask, shape_mask, room_types, \
                wall_count, door_count, window_count

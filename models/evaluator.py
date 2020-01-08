@@ -1,17 +1,17 @@
-import os
 import math
+import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+from scipy.ndimage.filters import maximum_filter
 
 from models.generator import Generator
-from models.losses import latent_reconstruction_loss
+from models.losses import reconstruction_loss
 from utils.utils import get_timestamp, create_directory_if_not_exist
 
 
 class FloorPlanGenerator:
-
     """
     For a given set of inputs (shape mask etc.) generates masks for walls, windows, doors,
     rooms, corners using the generator from the checkpoint
@@ -29,9 +29,11 @@ class FloorPlanGenerator:
         self.out_dir = out_dir
         self.latent_dim = latent_dim
 
+        self.threshold = 2
+
         create_directory_if_not_exist(self.out_dir)
 
-        self.latent_optimizer = tf.keras.optimizers.Adam(3e-2, beta_1=0.5)
+        self.latent_optimizer = tf.keras.optimizers.Adam(6e-2)
         self.generator = Generator(1, [3, 10, 17], self.latent_dim, 12, gen_ckpt_path, width, height)
 
     def evaluate(self, max_samples=10):
@@ -40,14 +42,14 @@ class FloorPlanGenerator:
 
         # Walls, doors, windows, rooms, corners, shape, room types, wall count,
         # door count, window count
-        for index, (wa, d, wi, r, c, s, rt, wc, dc, wic) in dataset.enumerate():
+        for index, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in dataset.enumerate():
 
             if index >= max_samples > 0:
                 return
 
-            self._plot_original_data(wa, d, wi, r, c, s, save_output=True)
+            self._plot_original_data(wa, d, wi, r, c, s, save_output=False)
 
-            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=True)
+            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=False)
 
     def _plot_original_data(self, wa, d, wi, r, c, s, save_output=False):
         """
@@ -89,7 +91,7 @@ class FloorPlanGenerator:
         plt.imshow(shape_mask)
 
         if save_output:
-            plt.savefig(os.path.join(self.out_dir,get_timestamp() + '_original.png'))
+            plt.savefig(os.path.join(self.out_dir, get_timestamp() + '_original.png'))
 
         plt.show()
 
@@ -113,9 +115,8 @@ class FloorPlanGenerator:
         latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
                                       trainable=True, validate_shape=True)
 
-        wdw_gen_out, room_gen_out, corner_gen_out = self._train_latent_variable(
-                        latent_variable, s, meta_input,
-                        wdw_target, room_target, corner_target, 200)
+        wdw_gen_out, room_gen_out, corner_gen_out, latent_loss = self._train_latent_variable(
+            latent_variable, s, meta_input, wdw_target, room_target, corner_target, rt, 300)
 
         wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
         room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
@@ -123,45 +124,188 @@ class FloorPlanGenerator:
 
         fig = plt.figure(figsize=(10, 12))
         fig.add_subplot(5, 6, 1)
-        plt.imshow(wdw_gen_out[0], cmap='hot', interpolation='nearest')
+        plt.imshow(self._filter_heatmap(wdw_gen_out[0]), cmap='hot', interpolation='nearest')
         fig.add_subplot(5, 6, 2)
-        plt.imshow(wdw_gen_out[1], cmap='hot', interpolation='nearest')
+        plt.imshow(self._filter_heatmap(wdw_gen_out[1]), cmap='hot', interpolation='nearest')
         fig.add_subplot(5, 6, 3)
-        plt.imshow(wdw_gen_out[2], cmap='hot', interpolation='nearest')
+        plt.imshow(self._filter_heatmap(wdw_gen_out[2]), cmap='hot', interpolation='nearest')
 
         for i in range(10):
             fig.add_subplot(5, 6, i + 4)
-            plt.imshow(room_gen_out[i], cmap='hot', interpolation='nearest')
+            plt.imshow(self._filter_heatmap(room_gen_out[i]), cmap='hot', interpolation='nearest')
 
         for i in range(17):
             fig.add_subplot(5, 6, i + 14)
-            plt.imshow(corner_gen_out[i], cmap='hot', interpolation='nearest')
+            plt.imshow(self._filter_heatmap(corner_gen_out[i]),
+                       cmap='hot', interpolation='nearest')
 
-        plt.savefig(os.path.join(self.out_dir,get_timestamp() + '_generated.png'))
-        plt.show(block=True)
+        plt.savefig(os.path.join(self.out_dir, get_timestamp() + '_generated.png'))
+        plt.show()
+
+        if latent_loss < 3.5:
+            self._generate_text_file(corner_gen_out, wdw_gen_out)
+
+    def _generate_text_file(self, corners, walls):
+
+        corner_points = []
+
+        for i in range(13):
+            filtered_corners = self._filter_heatmap(self._apply_nms(corners[i]))
+            x, y = np.nonzero(filtered_corners)
+            corner_points.append(zip(x, y))
+
+        final_corner_pairs = []
+        top_points = self._append_point(corner_points, [2, 5, 6, 9, 10, 11, 12])
+        right_points = self._append_point(corner_points, [3, 6, 7, 8, 10, 11, 12])
+        bottom_points = self._append_point(corner_points, [0, 4, 7, 8, 9, 11, 12])
+        left_points = self._append_point(corner_points, [1, 4, 5, 8, 9, 10, 12])
+
+        for i in range(13):
+
+            for (x, y) in corner_points[i]:
+
+                if i == 0:
+                    # 2 5 6 9 10 11 12
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                elif i == 1:
+                    # 3 6 7 8 10 11 12
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                elif i == 2:
+                    # 0 4 7 8 9 11 12
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 3:
+                    # 1 4 5 8 9 10 12
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                elif i == 4:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                elif i == 5:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 6:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 7:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                elif i == 8:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                elif i == 9:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 10:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 11:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+                elif i == 12:
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, left_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
+                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
+
+        print(final_corner_pairs)
+
+    @staticmethod
+    def _append_point(points, indices):
+
+        out_list = []
+
+        for i in indices:
+            out_list += points[i]
+
+        return out_list
+
+    def _find_closest_top_point(self, x, y, points):
+
+        distance = 100000
+        closest_point = None
+        for (pt_x, pt_y) in points:
+            if y + self.threshold >= pt_y >= y - self.threshold:
+                if x - pt_x > 0 and abs(x - pt_x) < distance:
+                    distance = abs(x - pt_x)
+                    closest_point = (pt_x, (pt_y + y)/2)
+
+        return closest_point
+
+    def _find_closest_bottom_point(self, x, y, points):
+
+        distance = 100000
+        closest_point = None
+        for (pt_x, pt_y) in points:
+            if y + self.threshold >= pt_y >= y - self.threshold:
+                if x - pt_x < 0 and abs(x - pt_x) < distance:
+                    distance = abs(x - pt_x)
+                    closest_point = (pt_x, (pt_y + y)/2)
+
+        return closest_point
+
+    def _find_closest_left_point(self, x, y, points):
+
+        distance = 100000
+        closest_point = None
+        for (pt_x, pt_y) in points:
+            if x + self.threshold >= pt_x >= x - self.threshold:
+                if y - pt_y > 0 and abs(y - pt_y) < distance:
+                    distance = abs(y - pt_y)
+                    closest_point = ((pt_x + x)/2, pt_y)
+
+        return closest_point
+
+    def _find_closest_right_point(self, x, y, points):
+
+        distance = 100000
+        closest_point = None
+        for (pt_x, pt_y) in points:
+            if x + self.threshold >= pt_x >= x - self.threshold:
+                if y - pt_y < 0 and abs(y - pt_y) < distance:
+                    distance = abs(y - pt_y)
+                    closest_point = ((pt_x + x)/2, pt_y)
+
+        return closest_point
 
     def _train_latent_variable(self, latent_variable, shape, meta_input, wdw_target,
-                               room_target, corner_target, iterations):
+                               room_target, corner_target, room_type, iterations):
+
+        latent_loss = 100
 
         for lat_step in range(iterations):
 
             with tf.GradientTape() as latent_tape:
 
-                wdw_gen_out, room_gen_out, corner_gen_out = self.generator([shape, meta_input, latent_variable], training=False)
-                latent_loss = latent_reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
-                                                  wdw_target, room_target, corner_target)
+                wdw_gen_out, room_gen_out, corner_gen_out = self.generator([shape, meta_input, latent_variable],
+                                                                           training=False)
+                latent_loss = reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
+                                                  wdw_target, room_target, corner_target, room_type)
 
             latent_gradients = latent_tape.gradient(latent_loss, latent_variable)
             self.latent_optimizer.apply_gradients(zip([latent_gradients], [latent_variable]))
 
             latent_norm = tf.norm(latent_variable, axis=1, keepdims=True)
             latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
-            latent_variable.assign(tf.divide(latent_variable, latent_norm)*math.sqrt(self.latent_dim))
+            latent_variable.assign(tf.divide(latent_variable, latent_norm) * math.sqrt(self.latent_dim))
 
             if lat_step % 5 == 0 or lat_step + 1 == iterations:
                 print('Step %d Lat loss %f' % (lat_step + 1, latent_loss))
 
-        return wdw_gen_out, room_gen_out, corner_gen_out
+        return wdw_gen_out, room_gen_out, corner_gen_out, latent_loss
+
+    def _filter_heatmap(self, heatmap, threshold=0.4):
+
+        filtered_heatmap = heatmap
+        filtered_heatmap[heatmap <= threshold] = 0
+
+        return filtered_heatmap
+
+    def _apply_nms(self, heatmap, window_size=5):
+
+        return heatmap * (heatmap == maximum_filter(heatmap, footprint=np.ones((window_size, window_size))))
 
     @staticmethod
     def _mask_to_segmentation_image(mask):

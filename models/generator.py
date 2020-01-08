@@ -104,9 +104,9 @@ class Generator(tf.keras.Model):
 
         return [
             ConvTransposeBlock(256, 4, 2, True, False),
+            ConvTransposeBlock(256, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
-            ConvTransposeBlock(64, 4, 2, True, False),
             ConvTransposeBlock(64, 4, 2, True, False),
             ConvTransposeBlock(32, 4, 2, True, False)
         ]

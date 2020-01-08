@@ -1,16 +1,16 @@
 {
   'epochs': 100,
-  'batch_size': 128,
-  'gen_lr': 5e-4,
-  'lat_lr': 2e+2,
-  'latent_iterations': 20,
+  'batch_size': 32,
+  'gen_lr': 2e-4,
+  'lat_lr': 5e-2,
+  'latent_iterations': 50,
   'generator_iterations': 2,
   'num_samples': 5000,
   'height': 128,
   'width': 128,
-  'latent_dimensions': 16,
+  'latent_dimensions': 64,
   'data': '/ssdtemp/datasets/tfrecords',
   'ckpt_dir': '/ssdtemp/checkpoints',
   'summary_dir': '/ssdtemp/summaries',
-  'gen_ckpt': ''
+  'gen_ckpt': '/ssdtemp/checkpoints/gen_20191217_190308_9.h5'
 }

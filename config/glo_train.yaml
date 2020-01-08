@@ -1,16 +1,16 @@
 {
-  'epochs': 20,
-  'batch_size': 64,
-  'gen_lr': 5e-4,
-  'lat_lr': 2e-2,
-  'latent_iterations': 15,
-  'generator_iterations': 5,
+  'epochs': 40,
+  'batch_size': 32,
+  'gen_lr': 2e-4,
+  'lat_lr': 3e-2,
+  'latent_iterations': 50,
+  'generator_iterations': 2,
   'num_samples': 5000,
   'height': 128,
   'width': 128,
-  'latent_dimensions': 32,
-  'data': './datasets/128/tfrecords',
+  'latent_dimensions': 64,
+  'data': './datasets/128/filtered/tfrecords',
   'ckpt_dir': './checkpoints',
   'summary_dir': './summaries',
-  'gen_ckpt': ''
+  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/building-design-assistant/checkpoints/20200108/002746/gen_20200108_081500_13.h5'
 }

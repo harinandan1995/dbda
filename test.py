@@ -1,5 +1,5 @@
 from data.dataset import FloorPlanDataset, FloorPlanDataType
-from models.evaluator import FloorPlanGenerator
+from models.random_shape_test import RandomShapeTester
 from utils.config_parser import Config
 from utils.utils import set_gpu_growth
 
@@ -18,5 +18,5 @@ floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEI
 
 dataset = floor_plan_dataset.generate_dataset('test', max_samples=1)
 
-evaluator = FloorPlanGenerator(dataset, LAT_DIM, GEN_CKPT)
+evaluator = RandomShapeTester(dataset, LAT_DIM, GEN_CKPT)
 evaluator.evaluate(NUM_SAMPLES)
