@@ -1,0 +1,12 @@
+{
+  'epochs': 200,
+  'batch_size': 32,
+  'lr': 1e-4,
+  'num_samples': 5000,
+  'height': 256,
+  'width': 256,
+  'data': './datasets/256/tfrecords',
+  'ckpt_dir': './checkpoints',
+  'summary_dir': './summaries',
+  'model_ckpt': '/home/harinandan/TUM/sose2019/IDP/building-design-assistant/checkpoints/20200116/205421/model_20200116_211433_10.h5'
+}

@@ -11,7 +11,7 @@ class TransformerConfig:
 
     def __init__(self, wall_thickness=3, window_thickness=2, door_thickness=2,
                  inp_dir='../datasets/vectors', out_dir='../datasets/tfrecords',
-                 out_format='tfrecord', out_width=128, out_height=128,
+                 out_format='tfrecord', out_width=256, out_height=256,
                  room_map=None, icon_map=None, color_map=None, corner_thickness=2):
 
         """
@@ -278,15 +278,17 @@ class VectorToImageTransformer:
 
         file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
 
-        # file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/06/d6/fe932a20fc0aa3f7415811dd1ce6/0004.txt']
+        # file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/09/4c/99c1cb1b8c35a3d6d39eb35ffdb0/0002.txt']
 
-        if len(file_paths) < num_images:
-            return file_paths
-        else:
-            if self.shuffle:
-                shuffle(file_paths)
+        if self.shuffle:
+            shuffle(file_paths)
+
+        if len(file_paths) > num_images > 0:
+            
             file_paths = file_paths[:num_images]
             return file_paths
+
+        return file_paths            
 
     def _load_semantics(self, file_path):
 
@@ -360,6 +362,7 @@ class VectorToImageTransformer:
         return False
 
     def _filter_walls(self, walls, wall_types):
+        
         invalid_indices = {}
         for wall_index_1, (wall_1, wall_type_1) in enumerate(zip(walls, wall_types)):
             for wall_index_2, (wall_2, wall_type_2) in enumerate(zip(walls, wall_types)):
@@ -497,7 +500,7 @@ class VectorToImageTransformer:
         tx_before = -min_x
         ty_before = -min_y
 
-        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.95
+        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.90
 
         tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
         ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
@@ -519,7 +522,7 @@ class VectorToImageTransformer:
         tx_before = -min_x
         ty_before = -min_y
 
-        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.95
+        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.85
 
         tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
         ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
@@ -581,6 +584,7 @@ class VectorToImageTransformer:
         return image, transformation
 
     def _get_bounding_mask(self, walls):
+        
         room_segmentation = np.zeros((self.out_height, self.out_width), dtype=np.uint8)
 
         for line in walls:
@@ -712,7 +716,7 @@ class VectorToImageTransformer:
         for corner in all_corners:
 
             cv2.circle(mask[corner[2]], (corner[0], corner[1]),
-                       radius=1, color=1, thickness=self.config.corner_thickness)
+                       radius=self.config.corner_thickness, color=1, thickness=-1)
 
         return mask
 

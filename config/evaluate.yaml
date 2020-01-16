@@ -1,9 +1,10 @@
 {
-  'height': 128,
-  'width': 128,
+  'height': 256,
+  'width': 256,
   'num_samples': 10,
   'latent_dimensions': 64,
-  'data': './datasets/128/tfrecords',
-  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/building-design-assistant/checkpoints/20200108/110459/gen_20200108_165554_9.h5'
+  'data': './datasets/256/tfrecords',
+  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200116/211140/gen_20200116_223256_2.h5',
+  'corner_ckpt': '/home/harinandan/TUM/sose2019/IDP/building-design-assistant/checkpoints/20200116/205421/model_20200116_211433_10.h5'
 }
 

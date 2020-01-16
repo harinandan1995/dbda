@@ -1,8 +1,5 @@
-import os
-from argparse import ArgumentParser
-
 from data.dataset import FloorPlanDataset, FloorPlanDataType
-from models.p2p_trainer import Pix2PixTrainer
+from trainers.p2p_trainer import Pix2PixTrainer
 from utils.utils import set_gpu_growth
 from utils.config_parser import Config
 

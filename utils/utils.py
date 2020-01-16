@@ -2,10 +2,12 @@ import datetime
 import os
 import time
 import sys
+import cv2
 
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
 import tensorflow as tf
+from skimage import measure
 
 
 # Create a directories in the path if they dont exist
@@ -26,6 +28,16 @@ def get_time():
 def get_timestamp():
 
     return datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
+
+
+def find_axis(pt1, pt2, threshold=1):
+
+    if abs(pt1[0] - pt2[0]) <= threshold:
+        return 0
+    elif abs(pt1[1] - pt2[1]) <= threshold:
+        return 1
+    else:
+        return -1
 
 
 def p2p_distance(point_1, point_2):
@@ -124,3 +136,52 @@ def set_gpu_growth():
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
             print(e)
+
+
+def get_harris_corners_img(gray_img):
+
+    img = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    corners = cv2.goodFeaturesToTrack(gray, 25, 0.01, 10)
+    corners = np.int0(corners)
+
+    for i in corners:
+        x, y = i.ravel()
+        cv2.circle(img, (x, y), 1, 255, -1)
+
+    return img
+
+
+def get_hough_lines_img(wall):
+
+    generated_img = np.zeros_like(wall, np.float32)
+    hough_lines = cv2.HoughLinesP(np.uint8(wall), 1, np.pi/180, 5, 3)
+
+    for line in hough_lines:
+        for x1, y1, x2, y2 in line:
+            cv2.line(generated_img, (x1, y1), (x2, y2), color=255.0, thickness=1)
+
+    return generated_img
+
+
+def extract_corners(heatmaps, heatmap_threshold=0.5, pixel_threshold=3):
+
+    heatmaps = (heatmaps > heatmap_threshold).astype(np.float32)
+    orientation_points = []
+    kernel = np.ones((3, 3), np.uint8)
+    for heatmap_index in range(0, heatmaps.shape[0]):
+
+        heatmap = heatmaps[heatmap_index, :, :]
+        # heatmap = cv2.erode(heatmap, kernel)
+        components = measure.label(heatmap, background=0)
+        points = []
+        for componentIndex in range(components.min() + 1, components.max() + 1):
+            ys, xs = (components == componentIndex).nonzero()
+            if ys.shape[0] <= pixel_threshold:
+                continue
+
+            points.append((xs.mean(), ys.mean()))
+        orientation_points.append(points)
+
+    return orientation_points
