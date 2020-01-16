@@ -1,5 +1,5 @@
 from data.dataset import FloorPlanDataset, FloorPlanDataType
-from trainers.glo_trainer_v2 import GLOTrainer
+from trainers.glo_trainer import GLOTrainer
 from utils.utils import set_gpu_growth
 from utils.config_parser import Config
 

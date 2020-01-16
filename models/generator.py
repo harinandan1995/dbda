@@ -51,8 +51,8 @@ class Generator(tf.keras.Model):
         skips = reversed(skips[:-1])
 
         # Converting the conv output to a vector
-        input_latent_shape = x.shape[3]
-        x = tf.keras.layers.Reshape((input_latent_shape,))(x)
+        x = tf.keras.layers.Flatten()(x)
+        input_latent_shape = x.shape[1]
 
         # Adding the latent input to the model
         if self.latent_dim > 0:
@@ -64,11 +64,12 @@ class Generator(tf.keras.Model):
         # Converting vector to a (HXWXC)
         total_latent_dim = input_latent_shape + self.latent_dim + self.meta_dim
         x = tf.keras.layers.Reshape((1, 1, total_latent_dim))(x)
+        x = ConvBlock(512, 4, 1, True, False)(x)
 
         # Upsampling and establishing the skip connections
         for up, skip in zip(up_stack, skips):
             x = up(x)
-            # x = concat([x, skip])
+            x = concat([x, skip])
 
         # Last layers
         wdw = tf.keras.layers.Conv2DTranspose(self.output_channels[0], 4, strides=2, padding='same',
@@ -77,14 +78,10 @@ class Generator(tf.keras.Model):
         rooms = tf.keras.layers.Conv2DTranspose(self.output_channels[1], 4, strides=2, padding='same',
                                                 kernel_initializer=initializer, activation='sigmoid')
 
-        corners = tf.keras.layers.Conv2DTranspose(self.output_channels[2], 4, strides=2, padding='same',
-                                                  kernel_initializer=initializer, activation='sigmoid')
-
         wdw_x = wdw(x)
         rooms_x = rooms(x)
-        corners_x = corners(x)
-
-        return tf.keras.Model(inputs=[inputs, count_inputs, latent_code], outputs=[wdw_x, rooms_x, corners_x])
+ 
+        return tf.keras.Model(inputs=[inputs, count_inputs, latent_code], outputs=[wdw_x, rooms_x])
 
     @staticmethod
     def _get_downsample_stack():
@@ -96,6 +93,7 @@ class Generator(tf.keras.Model):
             ConvBlock(16, 4, 2, True, False),
             ConvBlock(16, 4, 2, True, False),
             ConvBlock(32, 4, 2, True, False),
+            ConvBlock(64, 4, 2, True, False),
             ConvBlock(64, 4, 2, True, False)
         ]
 
@@ -104,11 +102,12 @@ class Generator(tf.keras.Model):
 
         return [
             ConvTransposeBlock(256, 4, 2, True, False),
-            ConvTransposeBlock(256, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
             ConvTransposeBlock(64, 4, 2, True, False),
-            ConvTransposeBlock(32, 4, 2, True, False)
+            ConvTransposeBlock(64, 4, 2, True, False),
+            ConvTransposeBlock(32, 4, 2, True, False),
+            ConvTransposeBlock(16, 4, 2, True, False)
         ]
 
     def summary(self, line_length=None, positions=None, print_fn=None):

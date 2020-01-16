@@ -1,5 +1,5 @@
 from data.dataset import FloorPlanDataset, FloorPlanDataType
-from models.evaluator_v2 import FloorPlanGenerator
+from models.evaluator import FloorPlanGenerator
 from utils.config_parser import Config
 from utils.utils import set_gpu_growth
 

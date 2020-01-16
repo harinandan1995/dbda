@@ -1,7 +1,7 @@
 import math
 
 from models.generator import Generator
-from models.losses import reconstruction_loss
+from models.losses import reconstruction_loss_v2
 from utils.utils import *
 
 
@@ -53,7 +53,7 @@ class GLOTrainer:
 
         train_dataset = self._get_training_dataset(batch_size, num_samples, shuffle)
 
-        generator = Generator(1, [3, 10, 17], self.latent_dim, 12, load_gen_ckpt, self.width, self.height)
+        generator = Generator(1, [3, 10], self.latent_dim, 12, load_gen_ckpt, self.width, self.height)
         print(generator.summary())
 
         generator_optimizer, latent_optimizer = self._get_optimizers()
@@ -71,7 +71,7 @@ class GLOTrainer:
                 for step, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
 
                     gen_loss, lat_loss = self._train_step(
-                        generator, wa, d, wi, r, c, s, rt, dc, wic,
+                        generator, wa, d, wi, r, s, rt, dc, wic,
                         generator_optimizer, latent_optimizer, lat_iter, gen_iter)
 
                     tf.summary.scalar('gen_loss', gen_loss, step)
@@ -100,39 +100,36 @@ class GLOTrainer:
 
             self._save_checkpoints(epoch, generator)
 
-    def _train_step(self, generator, walls, doors, windows, rooms, corners, shape,
+    def _train_step(self, generator, walls, doors, windows, rooms, shape,
                     room_type, door_count, window_count, generator_optimizer,
                     latent_optimizer, lat_iter, gen_iter):
 
         meta_input = tf.concat([room_type, door_count, window_count], axis=1)
         wdw_target = tf.concat([walls, doors, windows], axis=3)
         room_target = rooms
-        corner_target = corners
 
         latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
                                       trainable=True, validate_shape=True)
 
         latent_loss, latent_variable = self._train_latent_variable(generator, latent_variable, latent_optimizer, shape,
-                                                                   meta_input,
-                                                                   wdw_target, room_target, corner_target, room_type,
+                                                                   meta_input, wdw_target, room_target, room_type,
                                                                    lat_iter)
 
         generator_loss = self._train_generator(generator, latent_variable, generator_optimizer, shape,
-                                               meta_input, wdw_target, room_target, corner_target, room_type, gen_iter)
+                                               meta_input, wdw_target, room_target, room_type, gen_iter)
 
         return generator_loss, latent_loss
 
     def _train_latent_variable(self, generator, latent_variable, latent_optimizer, shape,
-                               meta_input, wdw_target, room_target, corner_target, room_type, iterations):
+                               meta_input, wdw_target, room_target, room_type, iterations):
 
         for lat_step in range(iterations):
 
             with tf.GradientTape() as latent_tape:
 
-                wdw_gen_out, room_gen_out, corner_gen_out = generator([shape, meta_input, latent_variable],
-                                                                      training=True)
-                latent_loss = reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
-                                                  wdw_target, room_target, corner_target, room_type)
+                wdw_gen_out, room_gen_out = generator([shape, meta_input, latent_variable], training=True)
+                latent_loss = reconstruction_loss_v2(shape, wdw_gen_out, room_gen_out,
+                                                     wdw_target, room_target, room_type)
 
             latent_gradients = latent_tape.gradient(latent_loss, latent_variable)
 
@@ -147,17 +144,17 @@ class GLOTrainer:
 
         return latent_loss, latent_variable
 
-    def _train_generator(self, generator, latent_variable, generator_optimizer, shape,
-                         meta_input, wdw_target, room_target, corner_target, room_type, iterations):
+    @staticmethod
+    def _train_generator(generator, latent_variable, generator_optimizer, shape,
+                         meta_input, wdw_target, room_target, room_type, iterations):
 
         for gen_step in range(iterations):
 
             with tf.GradientTape() as gen_tape:
 
-                wdw_gen_out, room_gen_out, corner_gen_out = generator([shape, meta_input, latent_variable],
-                                                                      training=True)
-                generator_loss = reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
-                                                     wdw_target, room_target, corner_target, room_type)
+                wdw_gen_out, room_gen_out = generator([shape, meta_input, latent_variable], training=True)
+                generator_loss = reconstruction_loss_v2(shape, wdw_gen_out, room_gen_out,
+                                                        wdw_target, room_target, room_type)
 
             generator_gradients = gen_tape.gradient(generator_loss, generator.trainable_weights)
             generator_optimizer.apply_gradients(zip(generator_gradients, generator.trainable_weights))
