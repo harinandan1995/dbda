@@ -17,7 +17,7 @@ NUM_SAMPLES = config.get_int('num_samples', 3)
 floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
                                       data_type=FloorPlanDataType.TFRECORD)
 
-dataset = floor_plan_dataset.generate_dataset('test', max_samples=NUM_SAMPLES)
+dataset = floor_plan_dataset.generate_dataset('train', max_samples=NUM_SAMPLES)
 
 evaluator = FloorPlanGenerator(dataset, LAT_DIM, GEN_CKPT, CORNER_CKPT)
 evaluator.evaluate(NUM_SAMPLES)

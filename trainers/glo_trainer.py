@@ -70,18 +70,22 @@ class GLOTrainer:
 
                 for step, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
 
+                    latent_variable = tf.Variable(tf.random.normal([wa.shape[0], self.latent_dim]),
+                                      trainable=True, validate_shape=True)
+
                     gen_loss, lat_loss = self._train_step(
                         generator, wa, d, wi, r, s, rt, dc, wic,
-                        generator_optimizer, latent_optimizer, lat_iter, gen_iter)
+                        generator_optimizer, latent_optimizer, 
+                        tf.constant(lat_iter), tf.constant(gen_iter),
+                        latent_variable)
 
                     tf.summary.scalar('gen_loss', gen_loss, step)
                     tf.summary.scalar('lat_loss', lat_loss, step)
 
                     gen_loss_metric(gen_loss)
                     lat_loss_metric(lat_loss)
-
-                    if step % 1 == 0:
-                        print('Batch %4d, Loss - Gen %.7f Lat %.7f' % (step + 1, gen_loss, lat_loss))
+    
+                    print('Batch %4d, Loss - Gen %.7f Lat %.7f' % (step + 1, gen_loss, lat_loss))
 
             with self.epoch_summary_writer.as_default():
 
@@ -100,30 +104,31 @@ class GLOTrainer:
 
             self._save_checkpoints(epoch, generator)
 
+    @tf.function
     def _train_step(self, generator, walls, doors, windows, rooms, shape,
                     room_type, door_count, window_count, generator_optimizer,
-                    latent_optimizer, lat_iter, gen_iter):
+                    latent_optimizer, lat_iter, gen_iter, latent_variable):
 
         meta_input = tf.concat([room_type, door_count, window_count], axis=1)
         wdw_target = tf.concat([walls, doors, windows], axis=3)
         room_target = rooms
 
-        latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
-                                      trainable=True, validate_shape=True)
+        latent_loss = self._train_latent_variable(
+            generator, latent_variable, latent_optimizer, shape,
+            meta_input, wdw_target, room_target, room_type, lat_iter)
 
-        latent_loss, latent_variable = self._train_latent_variable(generator, latent_variable, latent_optimizer, shape,
-                                                                   meta_input, wdw_target, room_target, room_type,
-                                                                   lat_iter)
-
-        generator_loss = self._train_generator(generator, latent_variable, generator_optimizer, shape,
-                                               meta_input, wdw_target, room_target, room_type, gen_iter)
+        generator_loss = self._train_generator(
+            generator, latent_variable, generator_optimizer, shape,
+            meta_input, wdw_target, room_target, room_type, gen_iter)
 
         return generator_loss, latent_loss
 
+    @tf.function
     def _train_latent_variable(self, generator, latent_variable, latent_optimizer, shape,
                                meta_input, wdw_target, room_target, room_type, iterations):
 
-        for lat_step in range(iterations):
+        latent_loss = tf.constant(0.0)
+        for lat_step in tf.range(iterations):
 
             with tf.GradientTape() as latent_tape:
 
@@ -139,16 +144,18 @@ class GLOTrainer:
             latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
             latent_variable.assign(tf.divide(latent_variable, latent_norm) * math.sqrt(self.latent_dim))
 
-            if lat_step % 5 == 0 or lat_step + 1 == iterations:
-                print('Step %d Lat loss %f' % (lat_step + 1, latent_loss))
+            
+            if lat_step % 10 == 0 or lat_step == iterations-1:
+                tf.print('Step :', lat_step + 1, 'Lat loss :', latent_loss)
 
-        return latent_loss, latent_variable
+        return latent_loss
 
-    @staticmethod
-    def _train_generator(generator, latent_variable, generator_optimizer, shape,
+    @tf.function
+    def _train_generator(self, generator, latent_variable, generator_optimizer, shape,
                          meta_input, wdw_target, room_target, room_type, iterations):
 
-        for gen_step in range(iterations):
+        generator_loss = tf.constant(0.0)
+        for gen_step in tf.range(iterations):
 
             with tf.GradientTape() as gen_tape:
 
@@ -159,8 +166,8 @@ class GLOTrainer:
             generator_gradients = gen_tape.gradient(generator_loss, generator.trainable_weights)
             generator_optimizer.apply_gradients(zip(generator_gradients, generator.trainable_weights))
 
-            if gen_step % 5 == 0 or gen_step + 1 == iterations:
-                print('Step %d Gen loss %f' % (gen_step + 1, generator_loss))
+            if gen_step % 10 == 0 or gen_step == iterations-1:
+                tf.print('Step :', gen_step + 1, 'Gen loss :', generator_loss)
 
         return generator_loss
 
@@ -190,7 +197,7 @@ class GLOTrainer:
         if num_samples > batch_size:
             train_dataset = train_dataset.take(num_samples)
 
-        train_dataset = train_dataset.batch(batch_size)
+        train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
 
         return train_dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 

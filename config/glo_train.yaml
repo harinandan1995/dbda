@@ -1,16 +1,16 @@
 {
-  'epochs': 40,
+  'epochs': 100,
   'batch_size': 32,
-  'gen_lr': 5e-4,
-  'lat_lr': 3e-2,
+  'gen_lr': 1e-4,
+  'lat_lr': 6e-2,
   'latent_iterations': 50,
   'generator_iterations': 2,
-  'num_samples': 5100,
+  'num_samples': 4500,
   'height': 256,
   'width': 256,
   'latent_dimensions': 64,
   'data': './datasets/256/tfrecords',
   'ckpt_dir': './checkpoints',
   'summary_dir': './summaries',
-  'gen_ckpt': ''
+  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200117/160736/gen_20200118_004845_53.h5'
 }

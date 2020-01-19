@@ -94,6 +94,27 @@ def merge_lines(line_1, line_2):
         return [(fixed_value, min(min_1, min_2)), (fixed_value, max(max_1, max_2))]
 
 
+def check_if_walls_touch(wall_1, wall_2, threshold):
+
+    direction = calc_line_direction(wall_2)
+
+    if calc_line_direction(wall_1) == calc_line_direction(wall_2):
+
+        if l2l_distance(wall_1, wall_2) <= 2 * threshold:
+
+            if direction == 0:
+                if (min(wall_1[0][0], wall_1[1][0]) > max(wall_2[0][0], wall_2[1][0]) + 1) or (min(wall_2[0][0], wall_2[1][0]) > max(wall_1[0][0], wall_1[1][0]) + 1):
+                    return False
+                else:
+                    return True
+            else:
+                if (min(wall_1[0][1], wall_1[1][1]) > max(wall_2[0][1], wall_2[1][1]) + 1) or (min(wall_2[0][1], wall_2[1][1]) > max(wall_1[0][1], wall_1[1][1]) + 1):
+                    return False
+                else:
+                    return True
+    return False
+
+
 def convert_to_point(x, y):
 
     return int(round(float(x))), int(round(float(y)))
@@ -185,3 +206,30 @@ def extract_corners(heatmaps, heatmap_threshold=0.5, pixel_threshold=3):
         orientation_points.append(points)
 
     return orientation_points
+
+def generate_vectors_using_harris_corners(wall, width, height):
+
+    corners = np.int0(cv2.goodFeaturesToTrack(wall, 25, 0.1, 4))
+    vectors = []
+
+    for i, c1 in enumerate(corners):
+        x1, y1 = c1.ravel()
+        for j, c2 in enumerate(corners):
+            if i == j:
+                continue
+            x2, y2 = c2.ravel()
+            axis = find_axis((x1, y1), (x2, y2), threshold=4)
+            if axis == 0:
+                mean_x = int((x1+x2)/2)
+                if np.mean(wall[mean_x-2:mean_x+2, y1:y2]) > 0.1:
+                    vectors.append(((mean_x, y1), (mean_x, y2)))
+            if axis == 1:
+                mean_y = int((y1+y2)/2)
+                if np.mean(wall[x1:x2, mean_y-2:mean_y+2]) > 0.1:
+                    vectors.append(((x1, mean_y), (x2, mean_y)))
+
+    generated_img = np.zeros((width, height), np.float32)
+    for vector in vectors:
+        cv2.line(generated_img, vector[0], vector[1], color=255.0, thickness=1)
+
+    return generated_img

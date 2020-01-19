@@ -37,17 +37,16 @@ def generator_loss(disc_generated_output, wdw_gen_out, room_gen_out, corner_gen_
 
 normal_dist = tfd.Normal(loc=0., scale=0.4)
 
+@tf.function
+def get_corner_loss(target, output, shape, add_shape_loss, add_weights):
 
-def get_corner_loss(target, output, shape, add_shape_loss=True, add_weights=True):
-
-    if add_weights:
-        weights = normal_dist.prob(1 - tf.reduce_sum(target, 3, True)) * 20
-    else:
-        weights = None
+    weights = tf.cond(add_weights, 
+        lambda : normal_dist.prob(1 - tf.reduce_sum(target, 3, True)) * 20, 
+        lambda : 1.0)
 
     loss = 20* bce_without_logits(target, output, sample_weight=weights)
-    if add_shape_loss:
-        loss += tf.reduce_mean((0.8 - shape) * output)
+    loss += tf.cond(add_shape_loss, 
+        lambda : tf.reduce_mean((0.8 - shape) * output), lambda: 0.0)
 
     return loss
 
@@ -72,6 +71,7 @@ def reconstruction_loss(shape, wdw_gen_out, room_gen_out, corner_gen_out,
     return 50 * wdw_loss + 10 * room_loss + 100 * corner_loss + 5 * room_type_loss + 5 * shape_loss
 
 
+@tf.function
 def reconstruction_loss_v2(shape, wdw_gen_out, room_gen_out,
                            wdw_target, room_target, room_type):
 

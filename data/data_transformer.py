@@ -337,29 +337,13 @@ class VectorToImageTransformer:
 
         return walls, wall_types, doors, windows, rooms, icons, max(x), max(y), min(x), min(y)
 
-    def _is_valid(self, rooms, icons):
+    @staticmethod
+    def _is_valid(rooms, icons):
 
         if 'stairs' in icons or 'entrance' not in icons:
             return False
 
         return True
-
-    def _check_if_walls_touch(self, wall_1, wall_2):
-
-        direction = calc_line_direction(wall_2)
-        if (calc_line_direction(wall_1) == calc_line_direction(wall_2)):
-            if l2l_distance(wall_1, wall_2) <= 2 * self.wall_thickness:
-                if direction == 0:
-                    if (min(wall_1[0][0], wall_1[1][0]) >= max(wall_2[0][0], wall_2[1][0])) or (min(wall_2[0][0], wall_2[1][0]) >= max(wall_1[0][0], wall_1[1][0])):
-                        return False
-                    else:
-                        return True
-                else:
-                    if (min(wall_1[0][1], wall_1[1][1]) >= max(wall_2[0][1], wall_2[1][1])) or (min(wall_2[0][1], wall_2[1][1]) >= max(wall_1[0][1], wall_1[1][1])):
-                        return False
-                    else:
-                        return True
-        return False
 
     def _filter_walls(self, walls, wall_types):
         
@@ -368,7 +352,7 @@ class VectorToImageTransformer:
             for wall_index_2, (wall_2, wall_type_2) in enumerate(zip(walls, wall_types)):
                 if wall_index_1 in invalid_indices or wall_index_2 in invalid_indices:
                     continue
-                if self._check_if_walls_touch(wall_1, wall_2) and wall_index_1 < wall_index_2:
+                if check_if_walls_touch(wall_1, wall_2, self.config.wall_thickness) and wall_index_1 < wall_index_2:
 
                     walls[wall_index_1] = merge_lines(wall_1, wall_2)
                     invalid_indices[wall_index_2] = True

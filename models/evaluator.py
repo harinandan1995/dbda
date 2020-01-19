@@ -2,6 +2,8 @@ import math
 
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import maximum_filter
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import fcluster
 
 from models.corner_detector import CornerDetector
 from models.generator import Generator
@@ -25,16 +27,17 @@ class FloorPlanGenerator:
         self.dataset = dataset
         self.width = width
         self.height = height
-        self.out_dir = out_dir
+        self.out_dir = os.path.join(out_dir, get_timestamp())
         self.latent_dim = latent_dim
 
         self.threshold = 2
+        self.colors = np.random.randint(255, size=(20, 3))
 
         create_directory_if_not_exist(self.out_dir)
 
         self.latent_optimizer = tf.keras.optimizers.Adam(6e-2)
         self.generator = Generator(1, [3, 10], self.latent_dim, 12, gen_ckpt_path, width, height)
-        self.corner_detector = CornerDetector(1, 13, corner_ckpt_path)
+        self.corner_detector = CornerDetector(3, 17, corner_ckpt_path)
 
     def evaluate(self, max_samples=10):
 
@@ -47,11 +50,11 @@ class FloorPlanGenerator:
             if index >= max_samples > 0:
                 return
 
-            self._plot_original_data(wa, d, wi, r, c, s, save_output=False)
+            self._plot_original_data(wa, d, wi, r, c, s, index, save_output=True)
 
-            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=True)
+            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, index, save_output=True)
 
-    def _plot_original_data(self, wa, d, wi, r, c, s, save_output=False):
+    def _plot_original_data(self, wa, d, wi, r, c, s, index, save_output=False):
         """
         Plots the masks of the original data
 
@@ -64,33 +67,39 @@ class FloorPlanGenerator:
         :param save_output: True or False. When True a copy of the plot as an image is stored in
         the output directory
         """
-
-        fig = plt.figure(figsize=(12, 12))
-        fig.add_subplot(5, 5, 1)
+        rows = 6
+        columns = 6
+        fig = plt.figure(figsize=(20, 12))
+        fig.add_subplot(rows, columns, 1)
         wall_mask = np.rollaxis(wa[0].numpy(), 2, 0)[0]
-        plt.imshow(wall_mask)
-        fig.add_subplot(5, 5, 2)
+        plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
+        fig.add_subplot(rows, columns, 2)
         door_mask = np.rollaxis(d[0].numpy(), 2, 0)[0]
-        plt.imshow(door_mask)
-        fig.add_subplot(5, 5, 3)
+        plt.imshow(door_mask, cmap='hot', interpolation='nearest')
+        fig.add_subplot(rows, columns, 3)
         window_mask = np.rollaxis(wi[0].numpy(), 2, 0)[0]
-        plt.imshow(window_mask)
+        plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+
+        for i in range(10):
+            target_numpy = np.rollaxis(r[0].numpy(), 2, 0)
+            fig.add_subplot(rows, columns, i + 4)
+            plt.imshow(target_numpy[i], cmap='hot', interpolation='nearest')
 
         for i in range(17):
             target_numpy = np.rollaxis(c[0].numpy(), 2, 0)
-            fig.add_subplot(5, 5, i + 4)
-            plt.imshow(target_numpy[i])
+            fig.add_subplot(rows, columns, i + 14)
+            plt.imshow(target_numpy[i], cmap='hot', interpolation='nearest')
 
-        fig.add_subplot(5, 5, 21)
+        fig.add_subplot(rows, columns, 31)
         shape_mask = np.rollaxis(s[0].numpy(), 2, 0)[0]
-        plt.imshow(shape_mask)
+        plt.imshow(shape_mask, cmap='hot', interpolation='nearest')
 
         if save_output:
-            plt.savefig(os.path.join(self.out_dir, get_timestamp() + '_original.png'))
+            plt.savefig(os.path.join(self.out_dir, '%d_original.png' % index))
 
         plt.show()
 
-    def _plot_generated_data(self, wa, d, wi, r, c, s, rt, wc, dc, wic, save_output=True):
+    def _plot_generated_data(self, wa, d, wi, r, c, s, rt, wc, dc, wic, index, save_output=True):
 
         """
         Plots the heatmap of the generated data for the given shape of the building
@@ -109,107 +118,276 @@ class FloorPlanGenerator:
         latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
                                       trainable=True, validate_shape=True)
 
-        wdw_gen_out, _, latent_loss = self._train_latent_variable(
-            latent_variable, s, meta_input, wdw_target, room_target, rt, 800)
-
-        # wdw_gen_out, _ = self.generator([tf.transpose(s, perm=[0, 2, 1, 3]), meta_input, latent_variable], training=False)
-
-        wall_gen_out = tf.slice(wdw_gen_out, [0, 0, 0, 0], [-1, -1, -1, 1])
-        wall_gen_out = tf.cast(tf.greater(wall_gen_out, 0.7), tf.float32)
-        corner_out = self.corner_detector(wall_gen_out, training=False)
+        wdw_gen_out, room_gen_out, latent_loss = self._train_latent_variable(
+            latent_variable, s, meta_input, wdw_target, room_target, rt, 600)
+        corner_input = tf.cast(tf.greater(wdw_gen_out, 0.7), tf.float32)
 
         wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
 
         fig = plt.figure(figsize=(12, 12))
-        fig.add_subplot(5, 5, 1)
+        rows = 6
+        columns = 6
+        fig.add_subplot(rows, columns, 1)
         plt.imshow(self._filter_heatmap(wdw_gen_out[0]), cmap='hot', interpolation='nearest')
-        fig.add_subplot(5, 5, 2)
+        fig.add_subplot(rows, columns, 2)
         plt.imshow(self._filter_heatmap(wdw_gen_out[1]), cmap='hot', interpolation='nearest')
-        fig.add_subplot(5, 5, 3)
-        generated_img = get_hough_lines_img(self._filter_heatmap(wdw_gen_out[0]))
-        plt.imshow(generated_img)
+        fig.add_subplot(rows, columns, 3)
+        plt.imshow(self._filter_heatmap(wdw_gen_out[2]), cmap='hot', interpolation='nearest')
 
+        corner_out = self.corner_detector(corner_input, training=False)
         corner_out = np.rollaxis(corner_out.numpy()[0], 2, 0)
         corner_points = extract_corners(corner_out, 0.5, 3)
+        corner_points = self._cluster_corner_points(corner_points)
 
-        for i in range(13):
-            fig.add_subplot(5, 5, i + 4)
-            for x, y in corner_points[i]:
-                cv2.circle(corner_out[i], (int(x), int(y)), 3, 255, -1)
-            plt.imshow(corner_out[i], cmap='hot', interpolation='nearest')
+        room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
+        for i in range(10):
+            fig.add_subplot(rows, columns, i + 4)
+            plt.imshow(self._filter_heatmap(room_gen_out[i]), cmap='hot', interpolation='nearest')
 
-        fig.add_subplot(5, 5, 17)
-        plt.imshow(self._generate_text_file(corner_points, wa), cmap='hot', interpolation='nearest')
+        for i in range(17):
+            fig.add_subplot(rows, columns, i + 14)
+            plt.imshow(self._filter_heatmap(corner_out[i]), cmap='hot', interpolation='nearest')
+
+        wall_mask, door_mask, window_mask = self._generate_text_file(
+            corner_points, self._filter_heatmap(wdw_gen_out[1]), self._filter_heatmap(wdw_gen_out[2]),
+            np.rollaxis(s.numpy()[0], 2, 0), self._filter_heatmap(room_gen_out),
+            os.path.join(self.out_dir, "out_%d.txt" % index)
+        )
+
+        fig.add_subplot(rows, columns, 31)
+        plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
+        fig.add_subplot(rows, columns, 32)
+        plt.imshow(door_mask, cmap='hot', interpolation='nearest')
+        fig.add_subplot(rows, columns, 33)
+        plt.imshow(window_mask, cmap='hot', interpolation='nearest')
 
         if save_output:
-            plt.savefig(os.path.join(self.out_dir, get_timestamp() + '_generated.png'))
+            plt.savefig(os.path.join(self.out_dir, '%d_generated.png' % index))
         plt.show()
 
-    def _generate_text_file(self, corner_points, walls):
+    def _train_latent_variable(self, latent_variable, shape, meta_input, wdw_target,
+                               room_target, room_type, iterations):
 
-        final_corner_pairs = []
+        latent_loss = 100
+
+        for lat_step in range(iterations):
+
+            with tf.GradientTape() as latent_tape:
+
+                wdw_gen_out, room_gen_out = self.generator([shape, meta_input, latent_variable], training=False)
+                latent_loss = reconstruction_loss_v2(shape, wdw_gen_out, room_gen_out,
+                                                     wdw_target, room_target, room_type)
+
+            latent_gradients = latent_tape.gradient(latent_loss, latent_variable)
+            self.latent_optimizer.apply_gradients(zip([latent_gradients], [latent_variable]))
+
+            latent_norm = tf.norm(latent_variable, axis=1, keepdims=True)
+            latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
+            latent_variable.assign(tf.divide(latent_variable, latent_norm) * math.sqrt(self.latent_dim))
+
+            if lat_step % 5 == 0 or lat_step + 1 == iterations:
+                print('Step %d Lat loss %f' % (lat_step + 1, latent_loss))
+
+        return wdw_gen_out, room_gen_out, latent_loss
+
+    def _generate_text_file(self, corner_points, door_heatmap, window_heatmap, shape, room_heatmap, file_path):
+
+        walls = self._get_walls(corner_points)
+        doors, windows = self._get_doors_and_windows(corner_points, door_heatmap, window_heatmap)
+
+        wall_mask = np.zeros((self.width, self.height), dtype=np.int8)
+        for pt1, pt2 in walls:
+            if pt2 is not None:
+                cv2.line(wall_mask, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color=1, thickness=3)
+
+        door_mask = np.zeros((self.width, self.height), dtype=np.int8)
+        for pt1, pt2 in doors:
+            if pt2 is not None:
+                cv2.line(door_mask, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color=1, thickness=3)
+
+        window_mask = np.zeros((self.width, self.height), dtype=np.int8)
+        for pt1, pt2 in windows:
+            if pt2 is not None:
+                cv2.line(window_mask, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color=1, thickness=3)
+
+        room_centers = self._get_room_centers(wall_mask, shape, room_heatmap)
+
+        text_file = open(file_path, 'w')
+
+        for wall in walls:
+            if wall[1] is not None:
+                text_file.write("%d %d %d %d wall\n" % (wall[0][0], wall[0][1], wall[1][0], wall[1][1]))
+        for door in doors:
+            if door[1] is not None:
+                text_file.write("%d %d %d %d door\n" % (door[0][0], door[0][1], door[1][0], door[1][1]))
+        for window in windows:
+            if window[1] is not None:
+                text_file.write("%d %d %d %d window\n" % (window[0][0], window[0][1], window[1][0], window[1][1]))
+        for room_center in room_centers:
+            text_file.write("%d %d room_%d\n" % (room_center[0][1], room_center[0][1], room_center[1]))
+
+        text_file.close()
+
+        return wall_mask, door_mask, window_mask
+
+    def _get_walls(self, corner_points):
+
+        lines = []
         top_points = self._append_point(corner_points, [2, 5, 6, 9, 10, 11, 12])
-        right_points = self._append_point(corner_points, [3, 5, 4, 8, 10, 9, 12])
+        right_points = self._append_point(corner_points, [1, 5, 4, 8, 10, 9, 12])
         bottom_points = self._append_point(corner_points, [0, 7, 4, 8, 9, 11, 12])
-        left_points = self._append_point(corner_points, [1, 7, 6, 8, 11, 10, 12])
+        left_points = self._append_point(corner_points, [3, 7, 6, 8, 11, 10, 12])
 
         for i in range(13):
 
             for (x, y) in corner_points[i]:
 
-                if i == 0:
-                    # 2 5 6 9 10 11 12
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                elif i == 1:
-                    # 3 6 7 8 10 11 12
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                elif i == 2:
-                    # 0 4 7 8 9 11 12
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
-                elif i == 3:
-                    # 1 4 5 8 9 10 12
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                elif i == 7:
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                elif i == 6:
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
-                elif i == 5:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
-                elif i == 4:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                elif i == 8:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                elif i == 11:
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, right_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, bottom_points))
-                elif i == 10:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
-                elif i == 9:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
-                elif i == 12:
-                    final_corner_pairs.append(self._find_closest_left_point(x, y, left_points))
-                    final_corner_pairs.append(self._find_closest_right_point(x, y, right_points))
-                    final_corner_pairs.append(self._find_closest_top_point(x, y, top_points))
-                    final_corner_pairs.append(self._find_closest_bottom_point(x, y, bottom_points))
+                if i == 0 or i == 7 or i == 4 or i == 8 or i == 11 or i == 9 or i == 12:
+                    lines.append(self._find_closest_top_point(x, y, top_points))
+                if i == 3 or i == 7 or i == 6 or i == 8 or i == 11 or i == 10 or i == 12:
+                    lines.append(self._find_closest_right_point(x, y, right_points))
+                if i == 2 or i == 6 or i == 5 or i == 9 or i == 10 or i == 11 or i == 12:
+                    lines.append(self._find_closest_bottom_point(x, y, bottom_points))
+                if i == 1 or i == 4 or i == 5 or i == 8 or i == 9 or i == 10 or i == 12:
+                    lines.append(self._find_closest_left_point(x, y, left_points))
 
-        generated_image = np.zeros((self.width, self.height), dtype=np.int8)
-        for pt1, pt2 in final_corner_pairs:
-            if pt2 is not None:
-                cv2.line(generated_image, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color=1, thickness=2)
+        self._filter_intersecting_lines(lines)
 
-        print(final_corner_pairs)
-        return generated_image
+        return lines
+
+    def _get_doors_and_windows(self, corner_points, door_heatmap, window_heatmap):
+
+        lines = []
+        top_points = self._append_point(corner_points, [16])
+        right_points = self._append_point(corner_points, [15])
+        bottom_points = self._append_point(corner_points, [14])
+        left_points = self._append_point(corner_points, [13])
+
+        for i in range(13, 17, 1):
+
+            for (x, y) in corner_points[i]:
+
+                if i == 13:
+                    lines.append(self._find_closest_right_point(x, y, right_points))
+                if i == 16:
+                    lines.append(self._find_closest_bottom_point(x, y, bottom_points))
+                if i == 15:
+                    lines.append(self._find_closest_left_point(x, y, left_points))
+                if i == 14:
+                    lines.append(self._find_closest_top_point(x, y, top_points))
+
+        windows = []
+        doors = []
+
+        for line in lines:
+            if line[1] is None:
+                continue
+            min_x = int(min(line[0][0], line[1][0]))
+            min_y = int(min(line[0][1], line[1][1]))
+            max_x = int(max(line[0][0], line[1][0]))
+            max_y = int(max(line[0][1], line[1][1]))
+            if np.mean(door_heatmap[min_y-1:max_y+1, min_x-1:max_x+1]) > 0.1:
+                doors.append(line)
+            elif np.mean(window_heatmap[min_y-1:max_y+1, min_x-1:max_x+1]) > 0.1:
+                windows.append(line)
+
+        self._filter_intersecting_lines(windows)
+        self._filter_intersecting_lines(doors)
+
+        return doors, windows
+
+    def _get_room_centers(self, walls, shape, rooms):
+
+        final_mask = walls + shape[0]
+        room_segmentation = measure.label(final_mask == 1, background=0)
+
+        room_centers = []
+
+        for i in range(np.amax(room_segmentation)+1):
+            if i == 0:
+                continue
+
+            for j in range(10):
+                if (np.mean(rooms[j][room_segmentation == i]) > 0.3):
+                    x, y = np.where(room_segmentation == i)
+                    mean_x = 0
+                    mean_y = 0
+                    for x1, y1 in zip(x, y):
+                        mean_x += x1
+                        mean_y += y1
+
+                    mean_x /= len(x)
+                    mean_y /= len(y)
+                    room_centers.append(((int(mean_y), int(mean_x)), j))
+                    break
+
+        return room_centers
+
+    def _cluster_corner_points(self, corner_points):
+
+        all_points = []
+        all_indices = []
+
+        for i in range(len(corner_points)):
+            for point in corner_points[i]:
+                all_points.append(point)
+                all_indices.append(i)
+
+        Z = linkage(all_points, method='complete',  metric='euclidean')
+
+        max_d = 4
+        clusters = fcluster(Z, max_d, criterion='distance')
+
+        cluster_sets = {}
+
+        for i, cluster_id in enumerate(clusters):
+            if str(cluster_id) in cluster_sets:
+                cluster_sets[str(cluster_id)].append(all_points[i])
+            else:
+                cluster_sets[str(cluster_id)] = [all_points[i]]
+
+        cluster_centroids = {}
+        for cluster_id, points in cluster_sets.items():
+            mean_x = 0
+            mean_y = 0
+            for x, y in points:
+                mean_x += x
+                mean_y += y
+
+            mean_x /= len(points)
+            mean_y /= len(points)
+            cluster_centroids[cluster_id] = (int(mean_x), int(mean_y))
+
+        cluster_points = []
+        for i in range(len(corner_points)):
+            cluster_points.append([])
+
+        for i, cluster_id in enumerate(clusters):
+            cluster_points[all_indices[i]].append(cluster_centroids[str(cluster_id)])
+
+        return cluster_points
+
+    @staticmethod
+    def _filter_intersecting_lines(lines):
+
+        invalid_line_indices = {}
+
+        for i, line_1 in enumerate(lines):
+            if line_1[1] is None:
+                invalid_line_indices[i] = True
+                continue
+            for j, line_2 in enumerate(lines):
+                if line_2[1] is None:
+                    invalid_line_indices[j] = True
+                    continue
+
+                if i in invalid_line_indices or j in invalid_line_indices:
+                    continue
+                if check_if_walls_touch(line_1, line_2, 2) and i < j:
+                    lines[i] = merge_lines(line_1, line_2)
+                    invalid_line_indices[j] = True
+
+        return [line for index, line in enumerate(lines) if index not in invalid_line_indices]
 
     @staticmethod
     def _append_point(points, indices):
@@ -270,68 +448,7 @@ class FloorPlanGenerator:
         return (x, y), closest_point
 
     @staticmethod
-    def _get_harris_corners(wall):
-
-        corners = cv2.goodFeaturesToTrack(wall, 25, 0.1, 4)
-
-        return np.int0(corners)
-
-    def _generate_vectors(self, wall):
-
-        corners = self._get_harris_corners(wall)
-        vectors = []
-
-        for i, c1 in enumerate(corners):
-            x1, y1 = c1.ravel()
-            for j, c2 in enumerate(corners):
-                if i == j:
-                    continue
-                x2, y2 = c2.ravel()
-                axis = find_axis((x1, y1), (x2, y2), threshold=4)
-                if axis == 0:
-                    mean_x = int((x1+x2)/2)
-                    if np.mean(wall[mean_x-2:mean_x+2, y1:y2]) > 0.1:
-                        vectors.append(((mean_x, y1), (mean_x, y2)))
-                if axis == 1:
-                    mean_y = int((y1+y2)/2)
-                    if np.mean(wall[x1:x2, mean_y-2:mean_y+2]) > 0.1:
-                        vectors.append(((x1, mean_y), (x2, mean_y)))
-
-        generated_img = np.zeros((self.width, self.height), np.float32)
-        for vector in vectors:
-            cv2.line(generated_img, vector[0], vector[1], color=255.0, thickness=1)
-
-        print(vectors)
-
-        return generated_img
-
-    def _train_latent_variable(self, latent_variable, shape, meta_input, wdw_target,
-                               room_target, room_type, iterations):
-
-        latent_loss = 100
-
-        for lat_step in range(iterations):
-
-            with tf.GradientTape() as latent_tape:
-
-                wdw_gen_out, room_gen_out = self.generator([shape, meta_input, latent_variable],
-                                                                           training=False)
-                latent_loss = reconstruction_loss_v2(shape, wdw_gen_out, room_gen_out,
-                                                  wdw_target, room_target, room_type)
-
-            latent_gradients = latent_tape.gradient(latent_loss, latent_variable)
-            self.latent_optimizer.apply_gradients(zip([latent_gradients], [latent_variable]))
-
-            latent_norm = tf.norm(latent_variable, axis=1, keepdims=True)
-            latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
-            latent_variable.assign(tf.divide(latent_variable, latent_norm) * math.sqrt(self.latent_dim))
-
-            if lat_step % 5 == 0 or lat_step + 1 == iterations:
-                print('Step %d Lat loss %f' % (lat_step + 1, latent_loss))
-
-        return wdw_gen_out, room_gen_out, latent_loss
-
-    def _filter_heatmap(self, heatmap, threshold=0.6):
+    def _filter_heatmap(heatmap, threshold=0.7):
 
         filtered_heatmap = heatmap
         filtered_heatmap[heatmap <= threshold] = 0
@@ -339,7 +456,8 @@ class FloorPlanGenerator:
 
         return filtered_heatmap
 
-    def _apply_nms(self, heatmap, window_size=3):
+    @staticmethod
+    def _apply_nms(heatmap, window_size=3):
 
         return heatmap * (heatmap == maximum_filter(heatmap, footprint=np.ones((window_size, window_size))))
 
@@ -352,11 +470,10 @@ class FloorPlanGenerator:
         :return: A segmentation image with C labels
         """
         num_colors = mask.shape[0]
-        colors = np.random.randint(255, size=(num_colors, 3))
 
         segmentation_image = 255 * np.ones((mask.shape[1], mask.shape[2], 3), np.uint8)
 
         for i in range(mask.shape[0]):
-            segmentation_image[mask[i] == 1] = colors[i]
+            segmentation_image[mask[i] == 1] = self.colors[i]
 
         return segmentation_image

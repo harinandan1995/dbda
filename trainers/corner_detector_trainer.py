@@ -41,7 +41,7 @@ class CornerDetectorTrainer:
 
         train_dataset = self._get_training_dataset(batch_size, num_samples, shuffle)
 
-        model = CornerDetector(1, 13, model_ckpt, self.width, self.height)
+        model = CornerDetector(3, 17, model_ckpt, self.width, self.height)
         print(model.summary())
 
         optimizer = self._get_optimizers()
@@ -57,7 +57,7 @@ class CornerDetectorTrainer:
 
                 for step, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
 
-                    loss = self._train_step(model, wa, c, s, optimizer)
+                    loss = self._train_step(model, wa, d, wi, c, s, optimizer)
 
                     tf.summary.scalar('loss', loss, step)
 
@@ -81,15 +81,18 @@ class CornerDetectorTrainer:
 
             self._save_checkpoints(epoch, model)
 
-    def _train_step(self, model, walls, corners, shape, optimizer):
+    @tf.function
+    def _train_step(self, model, walls, doors, windows, corners, shape, optimizer):
 
         with tf.GradientTape() as grad_tape:
 
-            output = model(walls, training=True)
+            model_input = tf.concat([walls, doors, windows], axis=3)
+            model_input += tf.random.normal(model_input.shape, stddev=2)
+            model_input = tf.cast(tf.greater(model_input, 0.7), tf.float32)
 
-            target = tf.slice(corners, [0, 0, 0, 0], [-1, -1, -1, 13])
+            output = model(model_input, training=True)
 
-            loss = get_corner_loss(target, output, shape, add_shape_loss=True, add_weights=True)
+            loss = get_corner_loss(corners, output, shape, tf.constant(True), tf.constant(True))
 
         gradients = grad_tape.gradient(loss, model.trainable_variables)
 
