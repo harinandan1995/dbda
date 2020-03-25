@@ -41,7 +41,7 @@ which contains positions of various building elements and room types in a txt fi
 
 Run the following command to transform these vector files into either *tfrecords* or *hdf5* or *png*
 
-    python3.py transform -i ./datasets/vectors -o ./datasets/tfrecords -t tfrecord
+    python3 transform.py -i ./datasets/vectors -o ./datasets/tfrecords -t tfrecord
     
 > Change the last argument to save the output in different formats. Allowed values: tfrecord, hdf5 and png
 
