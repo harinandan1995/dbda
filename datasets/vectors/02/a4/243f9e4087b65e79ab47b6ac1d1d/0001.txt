@@ -1,0 +1,12 @@
+14	380	59	380	door	1	1	
+116	343	162	375	special	3	1	
+39	236	61	291	cooking_counter	1	1	
+61	344	100	376	entrance	1	1	
+36	211	61	234	washing_basin	2	1	
+105	240	147	260	toilet	1	1	
+38	297	64	327	cooking_counter	1	1	
+9	351	59	371	PS	1	1	
+10	380	58	380	wall	1	1	
+10	342	10	380	wall	1	1	
+10	342	58	342	wall	1	1	
+58	342	58	380	wall	1	1	

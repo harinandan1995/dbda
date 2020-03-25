@@ -1,0 +1,13 @@
+33	105	33	322	door	1	1	
+1029	26	1029	167	door	1	1	
+879	182	1021	409	bathtub	1	1	
+921	17	1020	164	entrance	1	1	
+604	128	680	207	washing_basin	2	1	
+793	337	879	409	washing_basin	1	1	
+602	213	670	414	cooking_counter	1	1	
+730	313	792	410	washing_basin	1	1	
+506	202	556	222	bedroom	1	1	
+1029	7	1029	417.5	wall	1	1	
+33	417.5	1029	417.5	wall	1	1	
+33	7	33	417.5	wall	1	1	
+33	7	1029	7	wall	1	1	

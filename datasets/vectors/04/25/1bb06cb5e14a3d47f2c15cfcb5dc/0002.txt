@@ -1,0 +1,14 @@
+537	120	574	155	washing_basin	2	1	
+511	46	568	67	washing_basin	1	1	
+365	59	453	115	cooking_counter	1	1	
+589	58	639	111	special	3	1	
+456	44	511	68	washing_basin	2	1	
+76	197	123	231	special	3	1	
+355	161	429	191	cooking_counter	1	1	
+156	43	206	73	special	3	1	
+568	205	582	253	entrance	1	1	
+546.5	218	596.5	238	corridor	1	1	
+580	197	580	259.5	wall	1	1	
+563	259.5	580	259.5	wall	1	1	
+563	197	563	259.5	wall	1	1	
+563	197	580	197	wall	1	1	

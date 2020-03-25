@@ -1,0 +1,12 @@
+267	292	382	292	door	1	1	
+168	242	191	264	special	3	1	
+250	72	272	92	washing_basin	2	1	
+36	111	65	132	special	1	1	
+25	245	39	266	special	3	1	
+34	71	52	101	washing_basin	1	1	
+99	52	187	65	entrance	1	1	
+297	303	347	323	balcony	1	1	
+406	292	406	334	wall	1	1	
+238	334	406	334	wall	1	1	
+238	292	238	334	wall	1	1	
+238	292	406	292	wall	1	1	

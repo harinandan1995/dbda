@@ -1,0 +1,15 @@
+130	93	157	118	washing_basin	2	1	
+217	93	250	116	entrance	1	1	
+259	329	296	366	special	3	1	
+17	86	53	119	special	3	1	
+17	327	57	363	special	3	1	
+221	216	271	245	washing_basin	1	1	
+257	84	297	116	special	3	1	
+54	94	127	123	cooking_counter	1	1	
+253	120	273	172	washing_basin	1	1	
+172	96	214	132	entrance	1	1	
+78.5	215.5	128.5	235.5	bedroom	1	1	
+53	363	154.5	363	wall	1	1	
+53	88	53	363	wall	1	1	
+53	88	154.5	88	wall	1	1	
+154.5	88	154.5	363	wall	1	1	

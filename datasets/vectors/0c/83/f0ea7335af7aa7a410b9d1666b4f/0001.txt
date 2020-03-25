@@ -1,0 +1,16 @@
+170	36.5	192	36.5	door	1	1	
+154	55	180	79	special	3	1	
+251	54	274	82	special	3	1	
+188	57	243	81	entrance	1	1	
+161	169	197	191	cooking_counter	1	1	
+153	313	177	339	special	3	1	
+231	165	247	188	cooking_counter	1	1	
+226	81	247	104	washing_basin	2	1	
+161	118	174	136	washing_basin	2	1	
+231	108	247	138	cooking_counter	1	1	
+246	314	279	340	special	3	1	
+154.5	33.5	204.5	53.5	closet	1	1	
+161	51	198	51	wall	1	1	
+161	36.5	161	51	wall	1	1	
+161	36.5	198	36.5	wall	1	1	
+198	36.5	198	51	wall	1	1	

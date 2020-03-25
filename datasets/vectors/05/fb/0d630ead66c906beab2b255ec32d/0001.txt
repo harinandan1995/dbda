@@ -1,0 +1,15 @@
+81.5	137	81.5	162	door	1	1	
+149	127	182	171	washing_basin	1	1	
+324	235	366	276	special	3	1	
+307	126	331	230	cooking_counter	1	1	
+16	236	59	275	special	3	1	
+122	89	147	118	washing_basin	1	1	
+61	87	82	118	washing_basin	1	1	
+16	86	59	126	special	3	1	
+184	90	251	117	entrance	1	1	
+327	83	364	123	special	3	1	
+29	137.5	79	157.5	PS	1	1	
+81.5	128.5	81.5	167	wall	1	1	
+27	167	81.5	167	wall	1	1	
+27	128.5	27	167	wall	1	1	
+27	128.5	81.5	128.5	wall	1	1	

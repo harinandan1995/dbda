@@ -1,0 +1,11 @@
+97.5	102	97.5	146	door	1	1	
+26	97	47	121	washing_basin	1	1	
+184	100	205	153	cooking_counter	1	1	
+173	58	204	89	washing_basin	2	1	
+27	58	94	100	bathtub	1	1	
+27	125	59	140	toilet	1	1	
+35	91.5	85	111.5	bathroom	1	1	
+97.5	52.5	97.5	151	wall	1	1	
+23	151	97.5	151	wall	1	1	
+23	52.5	23	151	wall	1	1	
+23	52.5	97.5	52.5	wall	1	1	

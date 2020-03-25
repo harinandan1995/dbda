@@ -1,0 +1,13 @@
+37.5	10	37.5	22	door	1	1	
+285	83	309	107	special	3	1	
+8	83	38	104	bathtub	1	1	
+97	83	138	101	cooking_counter	1	1	
+70	85	94	107	special	3	1	
+44	86	61	102	washing_basin	1	1	
+9	30	38	56	entrance	1	1	
+137	85	154	104	cooking_counter	1	1	
+25	6.5	75	26.5	closet	1	1	
+37.5	6	37.5	27.5	wall	1	1	
+37.5	6	63.5	6	wall	1	1	
+63.5	6	63.5	27.5	wall	1	1	
+37.5	27.5	63.5	27.5	wall	1	1	

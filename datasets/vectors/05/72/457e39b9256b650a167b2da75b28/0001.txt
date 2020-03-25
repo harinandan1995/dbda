@@ -1,0 +1,17 @@
+211	85	245	85	door	1	1	
+197	94	251	120	entrance	1	1	
+309	131	331	158	cooking_counter	1	1	
+25	243	66	284	special	3	1	
+23	87	66	130	special	3	1	
+303	221	323	235	cooking_counter	1	1	
+161	132	193	176	washing_basin	1	1	
+307	91	323	114	cooking_counter	1	1	
+131	94	196	123	entrance	1	1	
+308	159	331	220	cooking_counter	1	1	
+72	96	96	125	entrance	1	1	
+324	248	366	284	special	3	1	
+147	95.5	197	115.5	kitchen	1	1	
+324	85	324	126.5	wall	1	1	
+20.5	126.5	324	126.5	wall	1	1	
+20.5	85	20.5	126.5	wall	1	1	
+20.5	85	324	85	wall	1	1	

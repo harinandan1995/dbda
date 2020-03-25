@@ -1,0 +1,16 @@
+96	274	298	274	door	1	1	
+203	99	247	99	door	1	1	
+74	106	96	132	washing_basin	1	1	
+32	247	68	287	special	3	1	
+161	140	190	181	washing_basin	1	1	
+320	248	360	288	special	3	1	
+30	99	68	133	special	3	1	
+133	106	156	132	washing_basin	1	1	
+303	228	322	240	cooking_counter	1	1	
+95.375	271	145.375	291	kitchen	1	1	
+317.5	99	317.5	274	wall	1	1	
+69	274	317.5	274	wall	1	1	
+69	274	69	288	wall	1	1	
+26	288	69	288	wall	1	1	
+26	99	26	288	wall	1	1	
+26	99	317.5	99	wall	1	1	
