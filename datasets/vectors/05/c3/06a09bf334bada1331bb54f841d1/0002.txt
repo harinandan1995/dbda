@@ -1,9 +1,0 @@
-60	138	95	180	cooking_counter	1	1	
-63	183	93	262	cooking_counter	1	1	
-70	268	98	302	washing_basin	2	1	
-167	77	233	128	cooking_counter	1	1	
-127	589.5	177	609.5	balcony	1	1	
-249	569.5	249	630	wall	1	1	
-55.5	630	249	630	wall	1	1	
-55.5	569.5	55.5	630	wall	1	1	
-55.5	569.5	249	569.5	wall	1	1	

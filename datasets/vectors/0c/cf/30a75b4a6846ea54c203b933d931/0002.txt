@@ -1,9 +1,0 @@
-8	82	35	112	special	3	1	
-49	173	75	244	cooking_counter	1	1	
-42	249	75	268	washing_basin	2	1	
-46	271	71	315	cooking_counter	1	1	
-4.5	62	54.5	82	PS	1	1	
-54.5	64	54.5	80.5	wall	1	1	
-5	80.5	54.5	80.5	wall	1	1	
-5	64	5	80.5	wall	1	1	
-5	64	54.5	64	wall	1	1	
