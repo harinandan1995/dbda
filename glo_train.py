@@ -1,9 +1,19 @@
+from argparse import ArgumentParser
+
 from data.dataset import FloorPlanDataset, FloorPlanDataType
 from trainers.glo_trainer import GLOTrainer
-from utils.utils import set_gpu_growth
 from utils.config_parser import Config
+from utils.utils import set_gpu_growth
 
 set_gpu_growth()
+
+parser = ArgumentParser()
+parser.add_argument('--config', help='Path to the config file. Default file: config/glo_train.yaml',
+                    default='./config/glo_train.yaml')
+args = parser.parse_args()
+
+config = Config(args.config)
+
 
 config = Config('./config/glo_train.yaml')
 

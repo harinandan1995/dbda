@@ -1,11 +1,18 @@
+from argparse import ArgumentParser
+
 from data.dataset import FloorPlanDataset, FloorPlanDataType
 from trainers.corner_detector_trainer import CornerDetectorTrainer
-from utils.utils import set_gpu_growth
 from utils.config_parser import Config
+from utils.utils import set_gpu_growth
 
 set_gpu_growth()
 
-config = Config('./config/corner_train.yaml')
+parser = ArgumentParser()
+parser.add_argument('--config', help='Path to the config file. Default file: config/corner_train.yaml',
+                    default='./config/corner_train.yaml')
+args = parser.parse_args()
+
+config = Config(args.config)
 
 # Data configs
 DATA_DIR = config.get_string('data', './datasets/tfrecords')

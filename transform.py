@@ -1,12 +1,17 @@
 from argparse import ArgumentParser
 
 from data.data_transformer import VectorToImageTransformer, TransformerConfig
-from utils.utils import set_gpu_growth
 from utils.config_parser import Config
+from utils.utils import set_gpu_growth
 
 set_gpu_growth()
 
-config = Config('./config/transform.yaml')
+parser = ArgumentParser()
+parser.add_argument('--config', help='Path to the config file. Default file: config/transform.yaml',
+                    default='./config/transform.yaml')
+args = parser.parse_args()
+
+config = Config(args.config)
 
 IN_DIR = config.get_string('input_dir')
 OUT_DIR = config.get_string('output_dir')

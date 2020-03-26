@@ -1,3 +1,18 @@
+# epochs: Number of epochs
+# batch_size: Batch size to be used for training
+# gen_lr: Learning rate for the optimizer used to train the generator (Adam)
+# lat_lr: Learning rate for the optimizer used to train the latent codes (Adam)
+# latent_iterations: Number of optimization steps for latent codes
+# generator_iterations: Number of optimizatio steps for generator
+# num_samples: Total samples to be used for training from the data directory
+# height: Height of the input (do not change this)
+# width: Width of the input (do not change this)
+# latent_dimensions: Number of dimensions of the latent code
+# data: Path to the directory with tf record files in the same directory structure as in datasets/256/tfrecords
+# ckpt_dir: Path to the directory where the checkpoints are stored
+# summary_dir: Path to the directory where the summaries are stored
+# gen_ckpt: Path to any previous checkpoint to be loaded before training (optional)
+
 {
   'epochs': 100,
   'batch_size': 32,
