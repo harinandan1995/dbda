@@ -1,0 +1,13 @@
+248.5	20	248.5	47	door	1	1	
+195	277	248	305	special	3	1	
+142	20	209	51	entrance	1	1	
+95	19	132	57	cooking_counter	1	1	
+28	20	89	53	bathtub	1	1	
+93	133	138	150	cooking_counter	1	1	
+214	54	241	137	entrance	1	1	
+29	50	55	70	washing_basin	1	1	
+205.5	20.5	255.5	40.5	closet	1	1	
+213	50	248.5	50	wall	1	1	
+213	11	213	50	wall	1	1	
+213	11	248.5	11	wall	1	1	
+248.5	11	248.5	50	wall	1	1	

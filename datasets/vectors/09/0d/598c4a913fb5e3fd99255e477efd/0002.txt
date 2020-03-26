@@ -1,0 +1,15 @@
+55	155	159	155	door	1	1	
+321	241	365	285	special	3	1	
+111	87	159	121	washing_basin	1	1	
+179	89	207	115	washing_basin	1	1	
+283	90	307	125	washing_basin	1	1	
+21	240	65	284	special	3	1	
+290	156	350	177	cooking_counter	1	1	
+210	91	241	116	washing_basin	1	1	
+245	90	285	125	entrance	1	1	
+324	88	342	130	toilet	1	1	
+47.5	108.5	97.5	128.5	bathroom	1	1	
+36	82	109.5	82	wall	1	1	
+109.5	82	109.5	155	wall	1	1	
+36	82	36	155	wall	1	1	
+36	155	109.5	155	wall	1	1	

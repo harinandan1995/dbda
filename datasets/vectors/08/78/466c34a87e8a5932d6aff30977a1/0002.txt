@@ -1,0 +1,13 @@
+79	215	110	215	door	1	1	
+182	162	229	200	washing_basin	2	1	
+182	96	230	148	washing_basin	1	1	
+29	98	113	203	bathtub	1	1	
+38	224	67	266	toilet	1	1	
+40	305	61	347	toilet	1	1	
+185	311	225	347	washing_basin	2	1	
+191	259	231	296	cooking_counter	1	1	
+41.5	142	91.5	162	bathroom	1	1	
+21	89	21	215	wall	1	1	
+21	89	112.5	89	wall	1	1	
+112.5	89	112.5	215	wall	1	1	
+21	215	112.5	215	wall	1	1	

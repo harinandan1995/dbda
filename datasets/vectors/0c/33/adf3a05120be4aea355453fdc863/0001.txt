@@ -1,0 +1,14 @@
+305	164.5	371	164.5	door	1	1	
+52	291	93	327	washing_basin	1	1	
+256	321	290	358	washing_basin	2	1	
+65	336	92	359	washing_basin	1	1	
+25	189	60	234	washing_basin	1	1	
+19	339	50	368	washing_basin	1	1	
+164	323	255	359	cooking_counter	1	1	
+31	91	100	127	bathtub	1	1	
+25	246	75	278	toilet	1	1	
+316.5	176.5	366.5	196.5	closet	1	1	
+302.5	164.5	302.5	209.5	wall	1	1	
+302.5	164.5	381.5	164.5	wall	1	1	
+381.5	164.5	381.5	209.5	wall	1	1	
+302.5	209.5	381.5	209.5	wall	1	1	

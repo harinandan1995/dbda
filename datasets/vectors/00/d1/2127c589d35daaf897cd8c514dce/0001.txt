@@ -1,0 +1,14 @@
+30	58	55	112	cooking_counter	1	1	
+241	273	286	320	entrance	1	1	
+23	30	54	50	toilet	1	1	
+48	113	75	139	washing_basin	2	1	
+-13	22	37	42	balcony	1	1	
+21	157.5	71	177.5	kitchen	1	1	
+27.5	196	65	196	wall	1	1	
+27.5	139	27.5	196	wall	1	1	
+7	58	17	58	wall	1	1	
+7	6.5	7	58	wall	1	1	
+7	6.5	17	6.5	wall	1	1	
+27.5	139	65	139	wall	1	1	
+65	139	65	196	wall	1	1	
+17	6.5	17	58	wall	1	1	

@@ -1,0 +1,14 @@
+111	67	156	67	door	1	1	
+265	162	300	241	cooking_counter	1	1	
+258	120	302	153	washing_basin	2	1	
+138	210	169	242	washing_basin	2	1	
+229	296	296	341	cooking_counter	1	1	
+137	139	165	202	cooking_counter	1	1	
+255	74	304	112	special	3	1	
+167	76	216	112	entrance	1	1	
+259	468	306	506	special	3	1	
+104	84	154	104	PS	1	1	
+157.5	67	157.5	121	wall	1	1	
+101	121	157.5	121	wall	1	1	
+101	67	101	121	wall	1	1	
+101	67	157.5	67	wall	1	1	

@@ -1,0 +1,10 @@
+56	681.5	161	681.5	door	1	1	
+56	239	91	280	washing_basin	2	1	
+200	201	237	239	cooking_counter	1	1	
+5	91	256	137	cooking_counter	1	1	
+55	157	92	203	cooking_counter	1	1	
+108	713.5	158	733.5	balcony	1	1	
+241	681.5	241	766.5	wall	1	1	
+25.5	766.5	241	766.5	wall	1	1	
+25.5	681.5	25.5	766.5	wall	1	1	
+25.5	681.5	241	681.5	wall	1	1	

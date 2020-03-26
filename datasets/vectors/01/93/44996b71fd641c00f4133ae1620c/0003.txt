@@ -1,0 +1,17 @@
+22	270	22	380	door	1	1	
+22	146	22	264	door	1	1	
+341	306	377	342	washing_basin	2	1	
+359	355	381	384	special	3	1	
+262	348	339	382	cooking_counter	1	1	
+330	160	368	221	bathtub	1	1	
+61	351	102	386	special	3	1	
+208	145	259	200	entrance	1	1	
+263	270	297	302	washing_basin	2	1	
+60	22	100	69	special	3	1	
+339	259	371	301	washing_basin	1	1	
+351	27	388	65	special	3	1	
+177	254	227	274	bedroom	1	1	
+382.5	139.5	382.5	389	wall	1	1	
+22	389	382.5	389	wall	1	1	
+22	139.5	22	389	wall	1	1	
+22	139.5	382.5	139.5	wall	1	1	
