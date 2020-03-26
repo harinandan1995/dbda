@@ -276,9 +276,9 @@ class VectorToImageTransformer:
 
     def _get_file_paths(self, num_images):
 
-        file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
+        # file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
 
-        # file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/09/4c/99c1cb1b8c35a3d6d39eb35ffdb0/0002.txt']
+        file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/0c/00/0e55fc740ec0574ecf88f0e3c4a1/0001.txt']
 
         if self.shuffle:
             shuffle(file_paths)

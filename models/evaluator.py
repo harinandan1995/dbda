@@ -35,9 +35,17 @@ class FloorPlanGenerator:
 
         create_directory_if_not_exist(self.out_dir)
 
-        self.latent_optimizer = tf.keras.optimizers.Adam(6e-2)
+        self.latent_optimizer = tf.keras.optimizers.Adam(2e-2)
+        self.iterations = 1500
         self.generator = Generator(1, [3, 10], self.latent_dim, 12, gen_ckpt_path, width, height)
         self.corner_detector = CornerDetector(3, 17, corner_ckpt_path)
+
+        self.room_map = {
+            0: 'living_room', 1: 'kitchen', 2: 'bedroom',
+            3: 'bathroom', 5: 'closet', 6: 'balcony',
+            7: 'corridor', 8: 'dining_room', 
+            9: 'laundry_room'
+        }
 
     def evaluate(self, max_samples=10):
 
@@ -119,14 +127,14 @@ class FloorPlanGenerator:
                                       trainable=True, validate_shape=True)
 
         wdw_gen_out, room_gen_out, latent_loss = self._train_latent_variable(
-            latent_variable, s, meta_input, wdw_target, room_target, rt, 600)
+            latent_variable, s, meta_input, wdw_target, room_target, rt, self.iterations)
         corner_input = tf.cast(tf.greater(wdw_gen_out, 0.7), tf.float32)
 
         wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
 
-        fig = plt.figure(figsize=(12, 12))
-        rows = 6
-        columns = 6
+        fig = plt.figure(figsize=(9, 21))
+        rows = 7
+        columns = 3
         fig.add_subplot(rows, columns, 1)
         plt.imshow(self._filter_heatmap(wdw_gen_out[0]), cmap='hot', interpolation='nearest')
         fig.add_subplot(rows, columns, 2)
@@ -140,12 +148,12 @@ class FloorPlanGenerator:
         corner_points = self._cluster_corner_points(corner_points)
 
         room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
-        for i in range(10):
-            fig.add_subplot(rows, columns, i + 4)
-            plt.imshow(self._filter_heatmap(room_gen_out[i]), cmap='hot', interpolation='nearest')
+        #for i in range(10):
+        #    fig.add_subplot(rows, columns, i + 4)
+        #    plt.imshow(self._filter_heatmap(room_gen_out[i]), cmap='hot', interpolation='nearest')
 
         for i in range(17):
-            fig.add_subplot(rows, columns, i + 14)
+            fig.add_subplot(rows, columns, i + 4)
             plt.imshow(self._filter_heatmap(corner_out[i]), cmap='hot', interpolation='nearest')
 
         wall_mask, door_mask, window_mask = self._generate_text_file(
@@ -154,12 +162,13 @@ class FloorPlanGenerator:
             os.path.join(self.out_dir, "out_%d.txt" % index)
         )
 
-        fig.add_subplot(rows, columns, 31)
-        plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 32)
-        plt.imshow(door_mask, cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 33)
-        plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+        #fig.add_subplot(rows, columns, 31)
+        #plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
+        #fig.add_subplot(rows, columns, 32)
+        #plt.imshow(door_mask, cmap='hot', interpolation='nearest')
+        #fig.add_subplot(rows, columns, 33)
+        #plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+
 
         if save_output:
             plt.savefig(os.path.join(self.out_dir, '%d_generated.png' % index))
@@ -224,7 +233,7 @@ class FloorPlanGenerator:
             if window[1] is not None:
                 text_file.write("%d %d %d %d window\n" % (window[0][0], window[0][1], window[1][0], window[1][1]))
         for room_center in room_centers:
-            text_file.write("%d %d room_%d\n" % (room_center[0][1], room_center[0][1], room_center[1]))
+            text_file.write("%d %d 0 0 %s\n" % (room_center[0][1], room_center[0][1], self.room_map[room_center[1]]))
 
         text_file.close()
 

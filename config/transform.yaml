@@ -11,11 +11,11 @@
 
 {
   'input_dir': '../public_datasets/vectors',
-  'output_dir': './datasets/256/tfrecords/val',
+  'output_dir': './datasets/256/tfrecords/test_1',
   'output_type': 'tfrecord' ,
   'width': 256,
   'height': 256,
-  'num_output_images': 400,
+  'num_output_images': 1000,
   'wall_thickness': 3,
   'window_thickness': 3,
   'door_thickness': 3,
