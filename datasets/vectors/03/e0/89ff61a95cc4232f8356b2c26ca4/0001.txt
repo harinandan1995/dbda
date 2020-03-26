@@ -1,9 +1,0 @@
-613	213	664	258	washing_basin	2	1	
-537	19	664	108	cooking_counter	1	1	
-83	288	156	402	cooking_counter	1	1	
-456	152	515	236	toilet	1	1	
-222.5	135	272.5	155	bedroom	1	1	
-60.5	8	60.5	282.5	wall	1	1	
-60.5	8	435	8	wall	1	1	
-435	8	435	282.5	wall	1	1	
-60.5	282.5	435	282.5	wall	1	1	
