@@ -10,12 +10,12 @@
 # num_output_images: Maximum number of images to be transformed and stored
 
 {
-  'input_dir': '../public_datasets/vectors',
-  'output_dir': './datasets/256/tfrecords/test_1',
+  'input_dir': '../public_datasets/filtering_v2/vectors',
+  'output_dir': './datasets/energy/256/tfrecords/train',
   'output_type': 'tfrecord' ,
   'width': 256,
   'height': 256,
-  'num_output_images': 1000,
+  'num_output_images': 1500,
   'wall_thickness': 3,
   'window_thickness': 3,
   'door_thickness': 3,

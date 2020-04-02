@@ -1,8 +1,7 @@
-import cv2
-import h5py
 import glob
-from skimage import measure
 from random import shuffle
+
+import h5py
 
 from utils.utils import *
 
@@ -101,7 +100,7 @@ class TransformerConfig:
 
 class VectorToImageTransformer:
 
-    def __init__(self, config, shuffle=False, num_images=-1):
+    def __init__(self, config):
 
         self.config = config
         self.inp_dir = config.inp_dir
@@ -111,19 +110,20 @@ class VectorToImageTransformer:
         self.out_width = config.out_width
         self.out_height = config.out_height
         self.colors = self.config.color_map
-        self.shuffle = shuffle
+
+    def transform_vectors_to_images(self, shuffle_data=False, num_images=-1):
 
         create_directory_if_not_exist(self.out_dir)
+        file_paths = self._get_file_paths(num_images, shuffle_data)
 
-        self.file_paths = self._get_file_paths(num_images)
-        print(len(self.file_paths))
-        self.num_images = len(self.file_paths)
+        if len(file_paths) == 0:
+            print('No vector files found in the path. Please check the path')
+            exit(1)
 
-    def transform_vectors_to_images(self):
+        for index, file_path in enumerate(file_paths):
 
-        for index, file_path in enumerate(self.file_paths):
-
-            walls, wall_types, doors, windows, rooms, icons, max_x, max_y, min_x, min_y = self._load_semantics(file_path)
+            walls, wall_types, doors, windows, rooms, icons, cooling, \
+            heating, max_x, max_y, min_x, min_y = self._load_semantics(file_path)
 
             if not self._is_valid(rooms, icons):
                 continue
@@ -162,9 +162,9 @@ class VectorToImageTransformer:
             }
 
             if self.out_format == 'h5':
-                self._store_as_h5(masks, file_path)
+                self._store_as_h5(masks, cooling, heating, file_path)
             elif self.out_format == 'tfrecord':
-                self._store_as_tfrecord(masks, primitive_sizes, file_path)
+                self._store_as_tfrecord(masks, primitive_sizes, cooling, heating, file_path)
             elif self.out_format == 'png':
                 self._store_as_png(masks, file_path)
 
@@ -178,7 +178,7 @@ class VectorToImageTransformer:
         return os.path.join(dir_3[1], dir_2[1], dir_1[1])
 
     @staticmethod
-    def _serialize_example_pyfunction(masks, primitive_sizes):
+    def _serialize_example_pyfunction(masks, primitive_sizes, cooling, heating):
 
         feature = {
             'wall_mask': float_feature(np.reshape(masks['wall_mask'], (-1))),
@@ -191,12 +191,24 @@ class VectorToImageTransformer:
             'room_types': float_feature(masks['room_types']),
             'wall_count': float_feature([primitive_sizes['wall_count']]),
             'door_count': float_feature([primitive_sizes['door_count']]),
-            'window_count': float_feature([primitive_sizes['window_count']])
+            'window_count': float_feature([primitive_sizes['window_count']]),
+            'cooling': float_feature([cooling]),
+            'heating': float_feature([heating])
         }
 
         return tf.train.Example(features=tf.train.Features(feature=feature))
 
-    def _store_as_tfrecord(self, masks, primitive_sizes, file_path):
+    def _store_as_tfrecord(self, masks, primitive_sizes, cooling, heating, file_path):
+
+        """
+        Stores the data into a tfrecord
+
+        :param masks: Dictionary containing all the masks (wall, door, window, room, shape, corner, entrance, room_types
+        :param primitive_sizes: Dictionary containing wall count, door count, window count
+        :param cooling: Value of the cooling parameter
+        :param heating: Value of the heating parameter
+        :param file_path: Path to the input vector file which is used to extract the output path
+        """
 
         base_dir = os.path.join(self.out_dir, self._get_base_directory(file_path))
         if not os.path.exists(base_dir):
@@ -207,20 +219,16 @@ class VectorToImageTransformer:
         print('Saving output at %s' % out_file_name)
 
         with tf.io.TFRecordWriter(out_file_name, 'GZIP') as writer:
-            example = self._serialize_example_pyfunction(masks, primitive_sizes)
+            example = self._serialize_example_pyfunction(masks, primitive_sizes, cooling, heating)
             writer.write(example.SerializeToString())
 
         writer.close()
 
     def _store_as_png(self, masks, file_path):
+
         """
         Stores the segmentation images as png
-        :param wall_mask: Wall mask
-        :param door_mask: Door mask
-        :param window_mask: Window mask
-        :param room_mask: Room mask
-        :param corner_mask: Corner mask
-        :param bounding_mask: Bouding mask
+        :param masks: Dictionary containing all the required masks
         :param file_path: Path to the input vector file to extract the output path
         """
 
@@ -238,15 +246,13 @@ class VectorToImageTransformer:
         cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(masks['corner_mask']))
         cv2.imwrite(out_file_prefix + '_shape.png', self._mask_to_segmentation_image(masks['shape_mask']))
 
-    def _store_as_h5(self, masks, file_path):
+    def _store_as_h5(self, masks, cooling, heating, file_path):
+
         """
         Stores the masks and segmentation images into h5py files
-        :param wall_mask: Wall mask
-        :param door_mask: Door mask
-        :param window_mask: Window mask
-        :param room_mask: Room mask
-        :param corner_mask: Corner mask
-        :param bounding_mask: Bouding mask
+        :param masks: Dictionary containing all the required masks
+        :param cooling: The value of the cooling parameter
+        :param heating: The value of the heating parameter
         :param file_path: Path to the input vector file to extract the output path
         """
         base_dir = os.path.join(self.out_dir, self._get_base_directory(file_path))
@@ -263,6 +269,8 @@ class VectorToImageTransformer:
         h5f.create_dataset('room_mask', data=masks['room_mask'])
         h5f.create_dataset('corner_mask', data=masks['corner_mask'])
         h5f.create_dataset('shape_mask', data=masks['shape_mask'])
+        h5f.create_dataset('cooling', data=cooling)
+        h5f.create_dataset('heating', data=heating)
 
         h5f.create_dataset('wall_seg', data=self._mask_to_segmentation_image(masks['wall_mask']))
         h5f.create_dataset('door_seg', data=self._mask_to_segmentation_image(masks['door_mask']))
@@ -274,13 +282,13 @@ class VectorToImageTransformer:
 
         h5f.close()
 
-    def _get_file_paths(self, num_images):
+    def _get_file_paths(self, num_images, shuffle_data):
 
-        # file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
+        file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
 
-        file_paths = ['/home/harinandan/TUM/sose2019/IDP/public_datasets/vectors/0c/00/0e55fc740ec0574ecf88f0e3c4a1/0001.txt']
+        # file_paths = ['../public_datasets/vectors/0c/00/0e55fc740ec0574ecf88f0e3c4a1/0001.txt']
 
-        if self.shuffle:
+        if shuffle_data:
             shuffle(file_paths)
 
         if len(file_paths) > num_images > 0:
@@ -298,6 +306,8 @@ class VectorToImageTransformer:
         windows = []
         rooms = {}
         icons = {}
+        cooling = 0
+        heating = 0
 
         with open(file_path) as vector:
 
@@ -307,19 +317,24 @@ class VectorToImageTransformer:
                 line = line.split('\t')
                 label = line[4].strip()
 
-                x.append(int(round(float(line[0]))))
-                x.append(int(round(float(line[2]))))
-
-                y.append(int(round(float(line[1]))))
-                y.append(int(round(float(line[3]))))
-
                 if label == 'wall':
                     walls.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
                     wall_types.append(int(line[5].strip()) - 1)
+
+                    x.append(int(round(float(line[0]))))
+                    x.append(int(round(float(line[2]))))
+
+                    y.append(int(round(float(line[1]))))
+                    y.append(int(round(float(line[3]))))
+
                 elif label == 'door':
                     doors.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
                 elif label == 'window':
                     windows.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
+                elif label == 'cooling':
+                    cooling = float(line[0])
+                elif label == 'heating':
+                    heating = float(line[0])
                 elif label in self.config.label_map.keys():
                     group = self.config.label_map[label][0]
                     if group == 'rooms':
@@ -335,7 +350,7 @@ class VectorToImageTransformer:
                         icons[label].append(
                             (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
 
-        return walls, wall_types, doors, windows, rooms, icons, max(x), max(y), min(x), min(y)
+        return walls, wall_types, doors, windows, rooms, icons, cooling, heating, max(x), max(y), min(x), min(y)
 
     @staticmethod
     def _is_valid(rooms, icons):

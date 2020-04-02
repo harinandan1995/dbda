@@ -36,7 +36,6 @@ config = TransformerConfig(wall_thickness=WALL_THICKNESS,
                            out_format=OUT_TYPE,
                            out_dir=OUT_DIR)
 
-vector_to_image_transformer = VectorToImageTransformer(
-                                    config, num_images=NUM_OUTPUT_IMAGES,
-                                    shuffle=SHUFFLE)
-vector_to_image_transformer.transform_vectors_to_images()
+vector_to_image_transformer = VectorToImageTransformer(config)
+vector_to_image_transformer.transform_vectors_to_images(num_images=NUM_OUTPUT_IMAGES,
+                                                        shuffle_data=SHUFFLE)

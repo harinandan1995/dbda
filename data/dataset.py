@@ -114,7 +114,9 @@ class FloorPlanDataset:
             'room_types': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'wall_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
             'door_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'window_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True)
+            'window_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'cooling': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+            'heating': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
         }
 
         return tf.io.parse_single_example(example_proto, feature_description)
@@ -137,6 +139,8 @@ class FloorPlanDataset:
         wall_count = data['wall_count']
         door_count = data['door_count']
         window_count = data['window_count']
+        cooling = data['cooling']
+        heating = data['heating']
 
         return wall_mask, door_mask, window_mask, entrance_mask, room_mask, corner_mask, shape_mask, room_types, \
-               wall_count, door_count, window_count
+               wall_count, door_count, window_count, cooling, heating
