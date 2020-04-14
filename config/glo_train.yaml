@@ -3,11 +3,12 @@
 # gen_lr: Learning rate for the optimizer used to train the generator (Adam)
 # lat_lr: Learning rate for the optimizer used to train the latent codes (Adam)
 # latent_iterations: Number of optimization steps for latent codes
-# generator_iterations: Number of optimizatio steps for generator
+# generator_iterations: Number of optimization steps for generator
 # num_samples: Total samples to be used for training from the data directory
 # height: Height of the input (do not change this)
 # width: Width of the input (do not change this)
 # latent_dimensions: Number of dimensions of the latent code
+# meta_data_dimensions: Number of other values such as room types indicator, cooling, heating parameters etc.
 # data: Path to the directory with tf record files in the same directory structure as in datasets/256/tfrecords
 # ckpt_dir: Path to the directory where the checkpoints are stored
 # summary_dir: Path to the directory where the summaries are stored
@@ -20,12 +21,13 @@
   'lat_lr': 6e-2,
   'latent_iterations': 50,
   'generator_iterations': 2,
-  'num_samples': 4500,
+  'num_samples': -1,
   'height': 256,
   'width': 256,
-  'latent_dimensions': 64,
-  'data': './datasets/256/tfrecords',
+  'latent_dimensions': 32,
+  'meta_data_dimensions': 14,
+  'data': './datasets/energy/256/tfrecords',
   'ckpt_dir': './checkpoints',
   'summary_dir': './summaries',
-  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200117/160736/gen_20200118_004845_53.h5'
+  'gen_ckpt': ''
 }

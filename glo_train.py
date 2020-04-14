@@ -14,14 +14,12 @@ args = parser.parse_args()
 
 config = Config(args.config)
 
-
-config = Config('./config/glo_train.yaml')
-
 # Data configs
 DATA_DIR = config.get_string('data', './datasets/tfrecords')
 WIDTH = config.get_int('width', 256)
 HEIGHT = config.get_int('height', 256)
 LAT_DIM = config.get_int('latent_dimensions', 8)
+META_DIM = config.get_int('meta_data_dimensions', 14)
 GEN_CKPT = config.get_string('gen_ckpt', '')
 CKPT_DIR = config.get_string('ckpt_dir', './checkpoints')
 SUMMARY_DIR = config.get_string('summary_dir', './summaries')
@@ -40,7 +38,8 @@ floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEI
 
 dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 
-gan_trainer = GLOTrainer(dataset, WIDTH, HEIGHT, LAT_DIM, save_summary=True, summary_dir=SUMMARY_DIR,
+gan_trainer = GLOTrainer(dataset, WIDTH, HEIGHT, LAT_DIM, META_DIM,
+                         save_summary=True, summary_dir=SUMMARY_DIR,
                          save_gen_ckpt=True, ckpt_dir=CKPT_DIR)
 
 gen_config = {

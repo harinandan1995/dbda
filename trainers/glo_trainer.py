@@ -7,7 +7,7 @@ from utils.utils import *
 
 class GLOTrainer:
 
-    def __init__(self, dataset, width, height, latent_dim,
+    def __init__(self, dataset, width, height, latent_dim, meta_dim,
                  save_summary=True, summary_dir='./summaries',
                  save_gen_ckpt=True, ckpt_dir='./checkpoints'):
 
@@ -15,6 +15,7 @@ class GLOTrainer:
         self.height = height
         self.width = width
         self.latent_dim = latent_dim
+        self.meta_dim = meta_dim
 
         self.save_summary = save_summary
         self.summary_dir = os.path.join(summary_dir, get_day(), get_time())
@@ -53,7 +54,7 @@ class GLOTrainer:
 
         train_dataset = self._get_training_dataset(batch_size, num_samples, shuffle)
 
-        generator = Generator(1, [3, 10], self.latent_dim, 12, load_gen_ckpt, self.width, self.height)
+        generator = Generator(1, [3, 10], self.latent_dim, self.meta_dim, load_gen_ckpt, self.width, self.height)
         print(generator.summary())
 
         generator_optimizer, latent_optimizer = self._get_optimizers()
@@ -68,14 +69,18 @@ class GLOTrainer:
 
             with summary_writer.as_default():
 
-                for step, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in enumerate(train_dataset):
+                for step, (wa, d, wi, e, r, c, s, rt, wc, dc, wic, cl, ht) in enumerate(train_dataset):
 
                     latent_variable = tf.Variable(tf.random.normal([wa.shape[0], self.latent_dim]),
-                                      trainable=True, validate_shape=True)
+                                                  trainable=True, validate_shape=True)
+
+                    meta_input = tf.concat([rt, dc, wic, cl, ht], axis=1)
+                    wdw_target = tf.concat([wa, d, wi], axis=3)
+                    room_target = r
 
                     gen_loss, lat_loss = self._train_step(
-                        generator, wa, d, wi, r, s, rt, dc, wic,
-                        generator_optimizer, latent_optimizer, 
+                        generator, meta_input, wdw_target, room_target, s, rt,
+                        generator_optimizer, latent_optimizer,
                         tf.constant(lat_iter), tf.constant(gen_iter),
                         latent_variable)
 
@@ -105,13 +110,8 @@ class GLOTrainer:
             self._save_checkpoints(epoch, generator)
 
     @tf.function
-    def _train_step(self, generator, walls, doors, windows, rooms, shape,
-                    room_type, door_count, window_count, generator_optimizer,
-                    latent_optimizer, lat_iter, gen_iter, latent_variable):
-
-        meta_input = tf.concat([room_type, door_count, window_count], axis=1)
-        wdw_target = tf.concat([walls, doors, windows], axis=3)
-        room_target = rooms
+    def _train_step(self, generator, meta_input, wdw_target, room_target, shape, room_type,
+                    generator_optimizer, latent_optimizer, lat_iter, gen_iter, latent_variable):
 
         latent_loss = self._train_latent_variable(
             generator, latent_variable, latent_optimizer, shape,
@@ -144,7 +144,6 @@ class GLOTrainer:
             latent_norm = tf.tile(latent_norm, [1, self.latent_dim])
             latent_variable.assign(tf.divide(latent_variable, latent_norm) * math.sqrt(self.latent_dim))
 
-            
             if lat_step % 10 == 0 or lat_step == iterations-1:
                 tf.print('Step :', lat_step + 1, 'Lat loss :', latent_loss)
 
