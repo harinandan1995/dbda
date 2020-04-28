@@ -36,9 +36,9 @@ def evaluate(config):
 
         meta_input = tf.concat([rt, dc, wic], axis=1)
         evaluator.reconstruct(wa, d, wi, r, c, s, rt, meta_input, str(index),
-                              save=True, show_walls=True, show_doors=False,
-                              show_windows=False, show_rooms=False, show_corners=False,
-                              show_shape=False, show_reconstructed=False)
+                              save=True, show_walls=True, show_doors=True,
+                              show_windows=True, show_rooms=True, show_corners=True,
+                              show_shape=True, show_reconstructed=True)
 
 
 if __name__ == '__main__':

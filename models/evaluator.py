@@ -1,9 +1,9 @@
 import math
 
 import matplotlib.pyplot as plt
-from scipy.ndimage.filters import maximum_filter
-from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.cluster.hierarchy import fcluster
+from scipy.cluster.hierarchy import linkage
+from scipy.ndimage.filters import maximum_filter
 
 from models.corner_detector import CornerDetector
 from models.generator import Generator
@@ -70,12 +70,39 @@ class FloorPlanGenerator:
                     show_windows=True, show_rooms=True, show_corners=True,
                     show_shape=True, show_reconstructed=True):
 
-        self._plot_original_data(wa, d, wi, r, c, s, prefix,
-                                 show_walls, show_doors, show_windows,
-                                 show_rooms, show_corners, show_shape, save)
+        self._plot_original_data(wa, d, wi, r, c, s, prefix, show_walls, show_doors,
+                                 show_windows, show_rooms, show_corners, show_shape, save)
         self._plot_reconstructed_data(wa, d, wi, r, s, rt, meta_input,
                                       prefix, show_walls, show_doors, show_windows,
                                       show_rooms, show_corners, show_shape, show_reconstructed, save)
+
+    def reconstruct_using_harris(self, wa, d, wi, r, c, s, rt, meta_input,
+                                 prefix, save=True, show_walls=True, show_doors=True,
+                                 show_windows=True, show_rooms=True, show_corners=True,
+                                 show_shape=True, show_reconstructed=True):
+
+        self._plot_original_data(wa, d, wi, r, c, s, prefix, show_walls, show_doors,
+                                 show_windows, show_rooms, show_corners, show_shape, save)
+
+        wdw_target = tf.concat([wa, d, wi], axis=3)
+        room_target = r
+
+        latent_variable = tf.Variable(tf.random.normal([meta_input.shape[0], self.latent_dim]),
+                                      trainable=True, validate_shape=True)
+
+        wdw_gen_out, room_gen_out, latent_loss = self._train_latent_variable(
+            latent_variable, s, meta_input, wdw_target, room_target, rt, self.iterations)
+
+        wall_mask_gen = self._filter_heatmap(np.moveaxis(np.squeeze(wdw_gen_out), -1, 0)[0])
+        harris_walls = generate_vectors_using_harris_corners(wall_mask_gen, self.width, self.height)
+        
+        fig = plt.figure(figsize=(20, 10))
+        fig.add_subplot(1, 2, 1)
+        plt.imshow(wall_mask_gen, cmap='hot', interpolation='nearest')
+        fig.add_subplot(1, 2, 2)
+        plt.imshow(np.transpose(harris_walls), cmap='hot', interpolation='nearest')
+        
+        plt.show()
 
     @staticmethod
     def _get_figure_size(show_walls, show_doors, show_windows, show_rooms,
@@ -113,7 +140,7 @@ class FloorPlanGenerator:
                                               show_corners, show_shape, show_reconstructed)
         fig = plt.figure(figsize=(rows * 2, columns * 2))
 
-        wdw_gen_out_np = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
+        wdw_gen_out_np = np.moveaxis(np.squeeze(wdw_gen_out), -1, 0)
         if show_walls:
             fig.add_subplot(rows, columns, index)
             plt.imshow(self._filter_heatmap(wdw_gen_out_np[0]), cmap='hot', interpolation='nearest')
@@ -129,7 +156,7 @@ class FloorPlanGenerator:
             plt.imshow(self._filter_heatmap(wdw_gen_out_np[2]), cmap='hot', interpolation='nearest')
             index += 1
 
-        room_gen_out_np = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
+        room_gen_out_np = np.moveaxis(np.squeeze(room_gen_out), -1, 0)
         if show_rooms:
             for i in range(10):
                 fig.add_subplot(rows, columns, index)
@@ -138,7 +165,7 @@ class FloorPlanGenerator:
 
         corner_input = tf.cast(tf.greater(wdw_gen_out, 0.7), tf.float32)
         corner_out = self.corner_detector(corner_input, training=False)
-        corner_out = np.rollaxis(corner_out.numpy()[0], 2, 0)
+        corner_out = np.moveaxis(np.squeeze(corner_out), -1, 0)
         corner_points = extract_corners(corner_out, 0.5, 3)
         corner_points = self._cluster_corner_points(corner_points)
         if show_corners:
@@ -151,14 +178,14 @@ class FloorPlanGenerator:
             corner_points,
             self._filter_heatmap(wdw_gen_out_np[1]),
             self._filter_heatmap(wdw_gen_out_np[2]),
-            np.rollaxis(shape.numpy()[0], 2, 0),
+            np.squeeze(shape),
             self._filter_heatmap(room_gen_out_np),
             os.path.join(out_file_name+'.txt')
         )
 
         if show_shape:
             fig.add_subplot(rows, columns, index)
-            plt.imshow(shape[0].numpy(), cmap='hot', interpolation='nearest')
+            plt.imshow(np.squeeze(shape), cmap='hot', interpolation='nearest')
             index += 1
 
         if show_reconstructed:
@@ -201,42 +228,42 @@ class FloorPlanGenerator:
         index = 1
         rows, columns = self._get_figure_size(show_walls, show_doors, show_windows, show_rooms,
                                               show_corners, show_shape, False)
-        fig = plt.figure(figsize=(rows * 2, columns * 2))
+        fig = plt.figure(figsize=(rows * 3, columns * 3))
 
         if show_walls:
-            wall_mask = np.rollaxis(walls[0].numpy(), 2, 0)[0]
+            wall_mask = np.squeeze(walls.numpy())
             fig.add_subplot(rows, columns, index)
             plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
             index += 1
 
         if show_doors:
-            door_mask = np.rollaxis(doors[0].numpy(), 2, 0)[0]
+            door_mask = np.squeeze(doors.numpy())
             fig.add_subplot(rows, columns, index)
             plt.imshow(door_mask, cmap='hot', interpolation='nearest')
             index += 1
 
         if show_windows:
-            window_mask = np.rollaxis(windows[0].numpy(), 2, 0)[0]
+            window_mask = np.squeeze(windows.numpy())
             fig.add_subplot(rows, columns, index)
             plt.imshow(window_mask, cmap='hot', interpolation='nearest')
             index += 1
 
         if show_rooms:
-            room_masks = np.rollaxis(rooms[0].numpy(), 2, 0)
+            room_masks = np.moveaxis(np.squeeze(rooms), -1, 0)
             for i in range(10):
                 fig.add_subplot(rows, columns, index)
                 plt.imshow(room_masks[i], cmap='hot', interpolation='nearest')
                 index += 1
 
         if show_corners:
-            corner_masks = np.rollaxis(corners[0].numpy(), 2, 0)
+            corner_masks = np.moveaxis(np.squeeze(corners), -1, 0)
             for i in range(17):
                 fig.add_subplot(rows, columns, index)
                 plt.imshow(corner_masks[i], cmap='hot', interpolation='nearest')
                 index += 1
 
         if show_shape:
-            shape_mask = np.rollaxis(shape[0].numpy(), 2, 0)[0]
+            shape_mask = np.squeeze(shape.numpy())
             fig.add_subplot(rows, columns, index)
             plt.imshow(shape_mask, cmap='hot', interpolation='nearest')
             index += 1
@@ -534,7 +561,7 @@ class FloorPlanGenerator:
     @staticmethod
     def _filter_heatmap(heatmap, threshold=0.7):
 
-        filtered_heatmap = heatmap
+        filtered_heatmap = heatmap.copy()
         filtered_heatmap[heatmap <= threshold] = 0
         filtered_heatmap[heatmap > threshold] = 1
 

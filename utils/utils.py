@@ -210,27 +210,27 @@ def extract_corners(heatmaps, heatmap_threshold=0.5, pixel_threshold=3):
 
 def generate_vectors_using_harris_corners(wall, width, height):
 
-    corners = np.int0(cv2.goodFeaturesToTrack(wall, 25, 0.1, 4))
+    corners = np.int0(cv2.goodFeaturesToTrack(wall, 25, 0.1, 5))
     vectors = []
 
     for i, c1 in enumerate(corners):
-        x1, y1 = c1.ravel()
+        y1, x1 = c1.ravel()
         for j, c2 in enumerate(corners):
             if i == j:
                 continue
-            x2, y2 = c2.ravel()
-            axis = find_axis((x1, y1), (x2, y2), threshold=4)
+            y2, x2 = c2.ravel()
+            axis = find_axis((x1, y1), (x2, y2), threshold=6)
             if axis == 0:
                 mean_x = int((x1+x2)/2)
-                if np.mean(wall[mean_x-2:mean_x+2, y1:y2]) > 0.1:
+                if np.mean(wall[mean_x-3:mean_x+3, min(y1, y2):max(y1, y2)]) > 0.2:
                     vectors.append(((mean_x, y1), (mean_x, y2)))
             if axis == 1:
                 mean_y = int((y1+y2)/2)
-                if np.mean(wall[x1:x2, mean_y-2:mean_y+2]) > 0.1:
+                if np.mean(wall[min(x1, x2):max(x1, x2), mean_y-3:mean_y+3]) > 0.2:
                     vectors.append(((x1, mean_y), (x2, mean_y)))
 
     generated_img = np.zeros((width, height), np.float32)
     for vector in vectors:
-        cv2.line(generated_img, vector[0], vector[1], color=255.0, thickness=1)
+        cv2.line(generated_img, vector[0], vector[1], color=255.0, thickness=3)
 
     return generated_img
