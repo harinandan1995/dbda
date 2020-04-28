@@ -207,6 +207,7 @@ def extract_corners(heatmaps, heatmap_threshold=0.5, pixel_threshold=3):
 
     return orientation_points
 
+
 def generate_vectors_using_harris_corners(wall, width, height):
 
     corners = np.int0(cv2.goodFeaturesToTrack(wall, 25, 0.1, 4))

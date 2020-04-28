@@ -21,7 +21,7 @@ class FloorPlanGenerator:
     :param
     """
 
-    def __init__(self, dataset, latent_dim, gen_ckpt_path, corner_ckpt_path,
+    def __init__(self, dataset, latent_dim, meta_dim, gen_ckpt_path, corner_ckpt_path,
                  out_dir='./out', width=256, height=256):
 
         self.dataset = dataset
@@ -36,8 +36,9 @@ class FloorPlanGenerator:
         create_directory_if_not_exist(self.out_dir)
 
         self.latent_optimizer = tf.keras.optimizers.Adam(2e-2)
-        self.iterations = 1500
-        self.generator = Generator(1, [3, 10], self.latent_dim, 12, gen_ckpt_path, width, height)
+        self.iterations = 500
+        self.generator = Generator(1, [3, 10], self.latent_dim, meta_dim,
+                                   gen_ckpt_path, width, height)
         self.corner_detector = CornerDetector(3, 17, corner_ckpt_path)
 
         self.room_map = {
@@ -47,79 +48,137 @@ class FloorPlanGenerator:
             9: 'laundry_room'
         }
 
-    def evaluate(self, max_samples=10):
+    def get_possible_plans(self, shape, meta_input, number_of_outputs=10, show_walls=True,
+                           show_doors=True, show_windows=True, show_rooms=True, show_corners=True,
+                           show_shape=True, show_reconstructed=True, save=True):
 
-        dataset = self.dataset.batch(1)
+        if number_of_outputs < 1:
+            return
 
-        # Walls, doors, windows, rooms, corners, shape, room types, wall count,
-        # door count, window count
-        for index, (wa, d, wi, e, r, c, s, rt, wc, dc, wic) in dataset.enumerate():
+        for i in range(number_of_outputs):
 
-            if index >= max_samples > 0:
-                return
+            latent_variable = tf.Variable(
+                tf.random.normal([meta_input.shape[0], self.latent_dim]), validate_shape=True)
 
-            self._plot_original_data(wa, d, wi, r, c, s, index, save_output=True)
+            wdw_gen_out, room_gen_out = self.generator([shape, meta_input, latent_variable], training=False)
+            out_file_name = os.path.join(self.out_dir, '%d_original' % i)
+            self._get_figure(shape, wdw_gen_out, room_gen_out, out_file_name, show_walls, show_doors,
+                             show_windows, show_rooms, show_corners, show_shape, show_reconstructed, save)
 
-            self._plot_generated_data(wa, d, wi, r, c, s, rt, wc, dc, wic, index, save_output=True)
+    def reconstruct(self, wa, d, wi, r, c, s, rt, meta_input,
+                    prefix, save=True, show_walls=True, show_doors=True,
+                    show_windows=True, show_rooms=True, show_corners=True,
+                    show_shape=True, show_reconstructed=True):
 
-    def _plot_original_data(self, wa, d, wi, r, c, s, index, save_output=False):
-        """
-        Plots the masks of the original data
+        self._plot_original_data(wa, d, wi, r, c, s, prefix,
+                                 show_walls, show_doors, show_windows,
+                                 show_rooms, show_corners, show_shape, save)
+        self._plot_reconstructed_data(wa, d, wi, r, s, rt, meta_input,
+                                      prefix, show_walls, show_doors, show_windows,
+                                      show_rooms, show_corners, show_shape, show_reconstructed, save)
 
-        :param wa: Wall mask
-        :param d: Door mask
-        :param wi: Window mask
-        :param r: Room masks
-        :param c: Corner masks
-        :param s: Shape mask
-        :param save_output: True or False. When True a copy of the plot as an image is stored in
-        the output directory
-        """
-        rows = 6
-        columns = 6
-        fig = plt.figure(figsize=(20, 12))
-        fig.add_subplot(rows, columns, 1)
-        wall_mask = np.rollaxis(wa[0].numpy(), 2, 0)[0]
-        plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 2)
-        door_mask = np.rollaxis(d[0].numpy(), 2, 0)[0]
-        plt.imshow(door_mask, cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 3)
-        window_mask = np.rollaxis(wi[0].numpy(), 2, 0)[0]
-        plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+    @staticmethod
+    def _get_figure_size(show_walls, show_doors, show_windows, show_rooms,
+                         show_corners, show_shape, show_reconstructed):
 
-        for i in range(10):
-            target_numpy = np.rollaxis(r[0].numpy(), 2, 0)
-            fig.add_subplot(rows, columns, i + 4)
-            plt.imshow(target_numpy[i], cmap='hot', interpolation='nearest')
+        total_plots = 0.0
+        if show_walls:
+            total_plots += 1.0
+        if show_doors:
+            total_plots += 1.0
+        if show_windows:
+            total_plots += 1.0
+        if show_rooms:
+            total_plots += 10.0
+        if show_corners:
+            total_plots += 17.0
+        if show_shape:
+            total_plots += 1.0
+        if show_reconstructed:
+            total_plots += 3.0
 
-        for i in range(17):
-            target_numpy = np.rollaxis(c[0].numpy(), 2, 0)
-            fig.add_subplot(rows, columns, i + 14)
-            plt.imshow(target_numpy[i], cmap='hot', interpolation='nearest')
+        rows = int(math.sqrt(total_plots))
+        columns = rows
+        if total_plots / rows > rows:
+            columns = rows + 1
+            rows += 1
 
-        fig.add_subplot(rows, columns, 31)
-        shape_mask = np.rollaxis(s[0].numpy(), 2, 0)[0]
-        plt.imshow(shape_mask, cmap='hot', interpolation='nearest')
+        return rows, columns
 
-        if save_output:
-            plt.savefig(os.path.join(self.out_dir, '%d_original.png' % index))
+    def _get_figure(self, shape, wdw_gen_out, room_gen_out, out_file_name, show_walls, show_doors,
+                    show_windows, show_rooms, show_corners, show_shape, show_reconstructed, save):
+
+        index = 1
+        rows, columns = self._get_figure_size(show_walls, show_doors, show_windows, show_rooms,
+                                              show_corners, show_shape, show_reconstructed)
+        fig = plt.figure(figsize=(rows * 2, columns * 2))
+
+        wdw_gen_out_np = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
+        if show_walls:
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(self._filter_heatmap(wdw_gen_out_np[0]), cmap='hot', interpolation='nearest')
+            index += 1
+
+        if show_doors:
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(self._filter_heatmap(wdw_gen_out_np[1]), cmap='hot', interpolation='nearest')
+            index += 1
+
+        if show_windows:
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(self._filter_heatmap(wdw_gen_out_np[2]), cmap='hot', interpolation='nearest')
+            index += 1
+
+        room_gen_out_np = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
+        if show_rooms:
+            for i in range(10):
+                fig.add_subplot(rows, columns, index)
+                plt.imshow(self._filter_heatmap(room_gen_out_np[i]), cmap='hot', interpolation='nearest')
+                index += 1
+
+        corner_input = tf.cast(tf.greater(wdw_gen_out, 0.7), tf.float32)
+        corner_out = self.corner_detector(corner_input, training=False)
+        corner_out = np.rollaxis(corner_out.numpy()[0], 2, 0)
+        corner_points = extract_corners(corner_out, 0.5, 3)
+        corner_points = self._cluster_corner_points(corner_points)
+        if show_corners:
+            for i in range(17):
+                fig.add_subplot(rows, columns, index)
+                plt.imshow(self._filter_heatmap(corner_out[i]), cmap='hot', interpolation='nearest')
+                index += 1
+
+        wall_mask, door_mask, window_mask = self._generate_text_file(
+            corner_points,
+            self._filter_heatmap(wdw_gen_out_np[1]),
+            self._filter_heatmap(wdw_gen_out_np[2]),
+            np.rollaxis(shape.numpy()[0], 2, 0),
+            self._filter_heatmap(room_gen_out_np),
+            os.path.join(out_file_name+'.txt')
+        )
+
+        if show_shape:
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(shape[0].numpy(), cmap='hot', interpolation='nearest')
+            index += 1
+
+        if show_reconstructed:
+
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
+            fig.add_subplot(rows, columns, index + 1)
+            plt.imshow(door_mask, cmap='hot', interpolation='nearest')
+            fig.add_subplot(rows, columns, index + 2)
+            plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+
+        if save:
+            plt.savefig(out_file_name+'.png')
 
         plt.show()
 
-    def _plot_generated_data(self, wa, d, wi, r, c, s, rt, wc, dc, wic, index, save_output=True):
+    def _plot_reconstructed_data(self, wa, d, wi, r, s, rt, meta_input, prefix,
+                                 show_walls, show_doors, show_windows, show_rooms,
+                                 show_corners, show_shape, show_reconstructed, save):
 
-        """
-        Plots the heatmap of the generated data for the given shape of the building
-
-        :param s: The shape mask for the generator
-        :param save_output: True or False. When True a copy of the plot as an image is stored in
-        the output directory
-        """
-
-        # wdw -> walls, doors, windows
-        # Get the output of the generator
-        meta_input = tf.concat([rt, dc, wic], axis=1)
         wdw_target = tf.concat([wa, d, wi], axis=3)
         room_target = r
 
@@ -128,50 +187,63 @@ class FloorPlanGenerator:
 
         wdw_gen_out, room_gen_out, latent_loss = self._train_latent_variable(
             latent_variable, s, meta_input, wdw_target, room_target, rt, self.iterations)
-        corner_input = tf.cast(tf.greater(wdw_gen_out, 0.7), tf.float32)
 
-        wdw_gen_out = np.rollaxis(wdw_gen_out.numpy()[0], 2, 0)
+        out_file_name = os.path.join(self.out_dir, prefix+'_recon')
+        self._get_figure(s, wdw_gen_out, room_gen_out, out_file_name, show_walls, show_doors,
+                         show_windows, show_rooms, show_corners, show_shape, show_reconstructed, save)
 
-        fig = plt.figure(figsize=(9, 21))
-        rows = 7
-        columns = 3
-        fig.add_subplot(rows, columns, 1)
-        plt.imshow(self._filter_heatmap(wdw_gen_out[0]), cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 2)
-        plt.imshow(self._filter_heatmap(wdw_gen_out[1]), cmap='hot', interpolation='nearest')
-        fig.add_subplot(rows, columns, 3)
-        plt.imshow(self._filter_heatmap(wdw_gen_out[2]), cmap='hot', interpolation='nearest')
+    def _plot_original_data(self, walls, doors, windows, rooms, corners, shape, prefix,
+                            show_walls, show_doors, show_windows, show_rooms,
+                            show_corners, show_shape, save):
 
-        corner_out = self.corner_detector(corner_input, training=False)
-        corner_out = np.rollaxis(corner_out.numpy()[0], 2, 0)
-        corner_points = extract_corners(corner_out, 0.5, 3)
-        corner_points = self._cluster_corner_points(corner_points)
+        out_file_name = os.path.join(self.out_dir, prefix + '_original')
 
-        room_gen_out = np.rollaxis(room_gen_out.numpy()[0], 2, 0)
-        #for i in range(10):
-        #    fig.add_subplot(rows, columns, i + 4)
-        #    plt.imshow(self._filter_heatmap(room_gen_out[i]), cmap='hot', interpolation='nearest')
+        index = 1
+        rows, columns = self._get_figure_size(show_walls, show_doors, show_windows, show_rooms,
+                                              show_corners, show_shape, False)
+        fig = plt.figure(figsize=(rows * 2, columns * 2))
 
-        for i in range(17):
-            fig.add_subplot(rows, columns, i + 4)
-            plt.imshow(self._filter_heatmap(corner_out[i]), cmap='hot', interpolation='nearest')
+        if show_walls:
+            wall_mask = np.rollaxis(walls[0].numpy(), 2, 0)[0]
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
+            index += 1
 
-        wall_mask, door_mask, window_mask = self._generate_text_file(
-            corner_points, self._filter_heatmap(wdw_gen_out[1]), self._filter_heatmap(wdw_gen_out[2]),
-            np.rollaxis(s.numpy()[0], 2, 0), self._filter_heatmap(room_gen_out),
-            os.path.join(self.out_dir, "out_%d.txt" % index)
-        )
+        if show_doors:
+            door_mask = np.rollaxis(doors[0].numpy(), 2, 0)[0]
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(door_mask, cmap='hot', interpolation='nearest')
+            index += 1
 
-        #fig.add_subplot(rows, columns, 31)
-        #plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
-        #fig.add_subplot(rows, columns, 32)
-        #plt.imshow(door_mask, cmap='hot', interpolation='nearest')
-        #fig.add_subplot(rows, columns, 33)
-        #plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+        if show_windows:
+            window_mask = np.rollaxis(windows[0].numpy(), 2, 0)[0]
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(window_mask, cmap='hot', interpolation='nearest')
+            index += 1
 
+        if show_rooms:
+            room_masks = np.rollaxis(rooms[0].numpy(), 2, 0)
+            for i in range(10):
+                fig.add_subplot(rows, columns, index)
+                plt.imshow(room_masks[i], cmap='hot', interpolation='nearest')
+                index += 1
 
-        if save_output:
-            plt.savefig(os.path.join(self.out_dir, '%d_generated.png' % index))
+        if show_corners:
+            corner_masks = np.rollaxis(corners[0].numpy(), 2, 0)
+            for i in range(17):
+                fig.add_subplot(rows, columns, index)
+                plt.imshow(corner_masks[i], cmap='hot', interpolation='nearest')
+                index += 1
+
+        if show_shape:
+            shape_mask = np.rollaxis(shape[0].numpy(), 2, 0)[0]
+            fig.add_subplot(rows, columns, index)
+            plt.imshow(shape_mask, cmap='hot', interpolation='nearest')
+            index += 1
+
+        if save:
+            plt.savefig(out_file_name + '.png')
+
         plt.show()
 
     def _train_latent_variable(self, latent_variable, shape, meta_input, wdw_target,
@@ -305,7 +377,8 @@ class FloorPlanGenerator:
 
         return doors, windows
 
-    def _get_room_centers(self, walls, shape, rooms):
+    @staticmethod
+    def _get_room_centers(walls, shape, rooms):
 
         final_mask = walls + shape[0]
         room_segmentation = measure.label(final_mask == 1, background=0)
@@ -317,7 +390,8 @@ class FloorPlanGenerator:
                 continue
 
             for j in range(10):
-                if (np.mean(rooms[j][room_segmentation == i]) > 0.3):
+                if np.mean(rooms[j][room_segmentation == i]) > 0.3:
+
                     x, y = np.where(room_segmentation == i)
                     mean_x = 0
                     mean_y = 0
@@ -332,7 +406,8 @@ class FloorPlanGenerator:
 
         return room_centers
 
-    def _cluster_corner_points(self, corner_points):
+    @staticmethod
+    def _cluster_corner_points(corner_points):
 
         all_points = []
         all_indices = []
@@ -469,20 +544,3 @@ class FloorPlanGenerator:
     def _apply_nms(heatmap, window_size=3):
 
         return heatmap * (heatmap == maximum_filter(heatmap, footprint=np.ones((window_size, window_size))))
-
-    @staticmethod
-    def _mask_to_segmentation_image(mask):
-        """
-        Converts a mask image with dimensions HxWxC into a segmentation image with C labels
-
-        :param mask: A HXWXC mask image
-        :return: A segmentation image with C labels
-        """
-        num_colors = mask.shape[0]
-
-        segmentation_image = 255 * np.ones((mask.shape[1], mask.shape[2], 3), np.uint8)
-
-        for i in range(mask.shape[0]):
-            segmentation_image[mask[i] == 1] = self.colors[i]
-
-        return segmentation_image

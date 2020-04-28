@@ -3,6 +3,7 @@
   'width': 256,
   'num_samples': 30,
   'latent_dimensions': 64,
+  'meta_dimensions': 12,
   'data': './datasets/256/tfrecords',
   'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200118/135342/gen_20200119_005412_54.h5',
   'corner_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200119/102618/model_20200119_151611_199.h5'
