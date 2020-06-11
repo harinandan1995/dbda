@@ -3,7 +3,7 @@ from random import shuffle
 
 import h5py
 
-from utils.utils import *
+from src.utils.utils import *
 
 
 class TransformerConfig:

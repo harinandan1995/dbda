@@ -1,7 +1,7 @@
-from data.dataset import FloorPlanDataset, FloorPlanDataType
-from trainers.p2p_trainer import Pix2PixTrainer
-from utils.utils import set_gpu_growth
-from utils.config_parser import Config
+from src.data.dataset import FloorPlanDataset, FloorPlanDataType
+from src.trainers import Pix2PixTrainer
+from src.utils.utils import set_gpu_growth
+from src.utils.config_parser import Config
 
 set_gpu_growth()
 

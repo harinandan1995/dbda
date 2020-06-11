@@ -1,6 +1,6 @@
-from models.corner_detector import CornerDetector
-from models.losses import get_corner_loss
-from utils.utils import *
+from src.models.corner_detector import CornerDetector
+from src.models.losses import get_corner_loss
+from src.utils.utils import *
 
 
 class CornerDetectorTrainer:

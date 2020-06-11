@@ -5,10 +5,10 @@ from scipy.cluster.hierarchy import fcluster
 from scipy.cluster.hierarchy import linkage
 from scipy.ndimage.filters import maximum_filter
 
-from models.corner_detector import CornerDetector
-from models.generator import Generator
-from models.losses import reconstruction_loss_v2
-from utils.utils import *
+from src.models.corner_detector import CornerDetector
+from src.models.generator import Generator
+from src.models.losses import reconstruction_loss_v2
+from src.utils.utils import *
 
 
 class FloorPlanGenerator:
@@ -95,7 +95,7 @@ class FloorPlanGenerator:
 
         wall_mask_gen = self._filter_heatmap(np.moveaxis(np.squeeze(wdw_gen_out), -1, 0)[0])
         harris_walls = generate_vectors_using_harris_corners(wall_mask_gen, self.width, self.height)
-        
+
         fig = plt.figure(figsize=(20, 10))
         fig.add_subplot(1, 2, 1)
         plt.imshow(wall_mask_gen, cmap='hot', interpolation='nearest')

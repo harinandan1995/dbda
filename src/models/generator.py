@@ -1,20 +1,22 @@
 import tensorflow as tf
 
-from models.blocks import ConvBlock, ConvTransposeBlock
+from src.models.blocks import ConvBlock, ConvTransposeBlock
 
 
-class CornerDetector(tf.keras.Model):
+class Generator(tf.keras.Model):
 
-    def __init__(self, input_channels, output_channels,
+    def __init__(self, input_channels, output_channels, latent_dim, meta_dim,
                  load_ckpt_path=None, width=128, height=128,
-                 name='corner_detector', **kwargs):
+                 name='generator', **kwargs):
 
-        super(CornerDetector, self).__init__(name=name, **kwargs)
+        super(Generator, self).__init__(name=name, **kwargs)
 
         self.width = width
         self.height = height
         self.output_channels = output_channels
         self.input_channels = input_channels
+        self.latent_dim = latent_dim
+        self.meta_dim = meta_dim
 
         self.model = self._generate_model()
 
@@ -32,7 +34,11 @@ class CornerDetector(tf.keras.Model):
 
         initializer = tf.random_normal_initializer(0., 0.02)
 
+        concat = tf.keras.layers.Concatenate()
+
         inputs = tf.keras.layers.Input(shape=[self.height, self.width, self.input_channels])
+
+        count_inputs = tf.keras.layers.Input(shape=[self.meta_dim])
 
         x = inputs
 
@@ -44,40 +50,63 @@ class CornerDetector(tf.keras.Model):
 
         skips = reversed(skips[:-1])
 
+        # Converting the conv output to a vector
+        x = tf.keras.layers.Flatten()(x)
+        input_latent_shape = x.shape[1]
+
+        # Adding the latent input to the model
+        if self.latent_dim > 0:
+            latent_code = tf.keras.layers.Input(shape=[self.latent_dim])
+            x = concat([x, count_inputs, latent_code])
+        else:
+            x = concat([x, count_inputs])
+
+        # Converting vector to a (HXWXC)
+        total_latent_dim = input_latent_shape + self.latent_dim + self.meta_dim
+        x = tf.keras.layers.Reshape((1, 1, total_latent_dim))(x)
+        x = ConvBlock(512, 4, 1, True, False)(x)
+
         # Upsampling and establishing the skip connections
         for up, skip in zip(up_stack, skips):
             x = up(x)
-            x = tf.keras.layers.Concatenate()([x, skip])
+            x = concat([x, skip])
 
         # Last layers
-        corners = tf.keras.layers.Conv2DTranspose(self.output_channels, 4, strides=2, padding='same',
-                                                  kernel_initializer=initializer, activation='sigmoid')(x)
+        wdw = tf.keras.layers.Conv2DTranspose(self.output_channels[0], 4, strides=2, padding='same',
+                                              kernel_initializer=initializer, activation='sigmoid')
 
-        return tf.keras.Model(inputs=inputs, outputs=corners)
+        rooms = tf.keras.layers.Conv2DTranspose(self.output_channels[1], 4, strides=2, padding='same',
+                                                kernel_initializer=initializer, activation='sigmoid')
+
+        wdw_x = wdw(x)
+        rooms_x = rooms(x)
+ 
+        return tf.keras.Model(inputs=[inputs, count_inputs, latent_code], outputs=[wdw_x, rooms_x])
 
     @staticmethod
     def _get_downsample_stack():
 
         return [
-            ConvBlock(16, 4, 2, False, False),
+            ConvBlock(8, 4, 2, False, False),
+            ConvBlock(8, 4, 2, True, False),
+            ConvBlock(16, 4, 2, True, False),
+            ConvBlock(16, 4, 2, True, False),
             ConvBlock(16, 4, 2, True, False),
             ConvBlock(32, 4, 2, True, False),
             ConvBlock(64, 4, 2, True, False),
-            ConvBlock(64, 4, 2, True, False),
-            ConvBlock(128, 4, 2, True, False),
-            ConvBlock(128, 4, 2, True, False)
+            ConvBlock(64, 4, 2, True, False)
         ]
 
     @staticmethod
     def _get_upsample_stack():
 
         return [
+            ConvTransposeBlock(256, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
             ConvTransposeBlock(128, 4, 2, True, False),
             ConvTransposeBlock(64, 4, 2, True, False),
             ConvTransposeBlock(64, 4, 2, True, False),
             ConvTransposeBlock(32, 4, 2, True, False),
-            ConvTransposeBlock(16, 4, 2, True, False),
             ConvTransposeBlock(16, 4, 2, True, False)
         ]
 
@@ -92,5 +121,5 @@ class CornerDetector(tf.keras.Model):
     def load_weights(self, filepath, by_name=False):
 
         if filepath is not None:
-            print('Loading model weights from %s' % filepath)
+            print('Loading generator weights from %s' % filepath)
             self.model.load_weights(filepath)

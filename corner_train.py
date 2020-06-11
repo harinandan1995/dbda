@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 
-from data.dataset import FloorPlanDataset, FloorPlanDataType
-from trainers.corner_detector_trainer import CornerDetectorTrainer
-from utils.config_parser import Config
-from utils.utils import set_gpu_growth
+from src.data.dataset import FloorPlanDataset, FloorPlanDataType
+from src.trainers import CornerDetectorTrainer
+from src.utils.config_parser import Config
+from src.utils.utils import set_gpu_growth
 
 set_gpu_growth()
 

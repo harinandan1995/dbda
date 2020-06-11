@@ -14,7 +14,7 @@ window_faces=[]
 door_vertices=[]
 door_faces=[]
 
-with open('/home/harinandan/TUM/sose2019/IDP/building-design-assistant/out/20200120_141712/out_3.txt') as vector:
+with open('/out/20200120_141712/out_3.txt') as vector:
 
     i = 0
     j = 0
@@ -24,6 +24,7 @@ with open('/home/harinandan/TUM/sose2019/IDP/building-design-assistant/out/20200
         label = line[4].strip()
 
         if label == 'wall':
+
             wall_vertices.append((int(line[0])/-10, int(line[1])/10, 0))
             wall_vertices.append((int(line[0])/-10, int(line[1])/10, 5))
             wall_vertices.append((int(line[2])/-10, int(line[3])/10, 5))

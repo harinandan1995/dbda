@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 
-from data.data_transformer import VectorToImageTransformer, TransformerConfig
-from utils.config_parser import Config
-from utils.utils import set_gpu_growth
+from src.data.data_transformer import VectorToImageTransformer, TransformerConfig
+from src.utils.config_parser import Config
+from src.utils.utils import set_gpu_growth
 
 set_gpu_growth()
 

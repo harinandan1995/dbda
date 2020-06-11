@@ -2,10 +2,10 @@ from argparse import ArgumentParser
 
 import tensorflow as tf
 
-from data.dataset import FloorPlanDataset, FloorPlanDataType
-from models.evaluator import FloorPlanGenerator
-from utils.config_parser import Config
-from utils.utils import set_gpu_growth
+from src.data.dataset import FloorPlanDataset, FloorPlanDataType
+from src.models.evaluator import FloorPlanGenerator
+from src.utils.config_parser import Config
+from src.utils.utils import set_gpu_growth
 
 set_gpu_growth()
 

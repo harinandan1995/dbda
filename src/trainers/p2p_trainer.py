@@ -1,7 +1,7 @@
-from models.discriminator import Discriminator
-from models.generator import Generator
-from models.losses import discriminator_loss, generator_loss
-from utils.utils import *
+from src.models.discriminator import Discriminator
+from src.models.generator import Generator
+from src.models.losses import discriminator_loss, generator_loss
+from src.utils.utils import *
 
 
 class Pix2PixTrainer:

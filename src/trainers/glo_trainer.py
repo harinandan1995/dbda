@@ -1,8 +1,8 @@
 import math
 
-from models.generator import Generator
-from models.losses import reconstruction_loss_v2
-from utils.utils import *
+from src.models.generator import Generator
+from src.models.losses import reconstruction_loss_v2
+from src.utils.utils import *
 
 
 class GLOTrainer:

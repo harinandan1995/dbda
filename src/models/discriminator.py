@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from models.blocks import ConvBlock
+from src.models.blocks import ConvBlock
 
 
 class Discriminator(tf.keras.Model):
