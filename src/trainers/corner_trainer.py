@@ -18,7 +18,11 @@ class CornerDetectorTrainer(ITrainer):
 
     def _calculate_loss(self, data):
 
-        walls, doors, windows, _, _, corners, shape, *_ = data
+        walls = data['wall_mask']
+        doors = data['door_mask']
+        windows = data['window_mask']
+        corners = data['corner_mask']
+        shape = data['shape_mask']
 
         model_input = tf.concat([walls, doors, windows], axis=3)
         model_input += tf.random.normal(model_input.shape, stddev=2)

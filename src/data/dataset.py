@@ -5,6 +5,8 @@ from enum import Enum
 import h5py
 import tensorflow as tf
 
+from src.utils.tfrecord import deserialize_floor_plan
+
 
 class FloorPlanDataType(Enum):
     TFRECORD = '*.tfrecord'
@@ -92,7 +94,7 @@ class FloorPlanDataset:
                                    cycle_length=self.num_parallel_reads,
                                    num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-        dataset = dataset.map(self._parse_function, num_parallel_calls=self.num_parallel_reads)
+        dataset = dataset.map(deserialize_floor_plan, num_parallel_calls=self.num_parallel_reads)
 
         dataset = dataset.map(
             lambda data: self._transform_and_filter_masks(data),
@@ -101,46 +103,21 @@ class FloorPlanDataset:
         return dataset
 
     @staticmethod
-    def _parse_function(example_proto):
+    def _transform_and_filter_masks(data):
 
-        feature_description = {
-            'wall_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'door_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'window_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'entrance_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'room_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'corner_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'shape_mask': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'room_types': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'wall_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'door_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'window_count': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'cooling': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-            'heating': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
-        }
+        data['wall_mask'] = tf.io.parse_tensor(data['wall_mask'], tf.float32)
+        data['door_mask'] = tf.io.parse_tensor(data['door_mask'], tf.float32)
+        data['window_mask'] = tf.io.parse_tensor(data['window_mask'], tf.float32)
+        data['entrance_mask'] = tf.io.parse_tensor(data['entrance_mask'], tf.float32)
+        data['room_mask'] = tf.io.parse_tensor(data['room_mask'], tf.float32)
+        data['corner_mask'] = tf.io.parse_tensor(data['corner_mask'], tf.float32)
+        data['shape_mask'] = tf.io.parse_tensor(data['shape_mask'], tf.float32)
+        data['room_types'] = tf.io.parse_tensor(data['room_types'], tf.float32)
 
-        return tf.io.parse_single_example(example_proto, feature_description)
+        data['wall_count'] = tf.cast(data['wall_count'], tf.float32)
+        data['door_count'] = tf.cast(data['door_count'], tf.float32)
+        data['window_count'] = tf.cast(data['window_count'], tf.float32)
+        data['cooling'] = tf.cast(data['cooling'], tf.float32)
+        data['heating'] = tf.cast(data['heating'], tf.float32)
 
-    def _transform_and_filter_masks(self, data):
-
-        wall_mask = tf.reshape(data['wall_mask'], [self.width, self.height, 1])
-        door_mask = tf.reshape(data['door_mask'], [self.width, self.height, 1])
-        window_mask = tf.reshape(data['window_mask'], [self.width, self.height, 1])
-        entrance_mask = tf.reshape(data['entrance_mask'], [self.width, self.height, 1])
-        room_mask = tf.transpose(tf.reshape(data['room_mask'], [10, self.width, self.height]),
-                                 perm=[1, 2, 0])
-        shape_mask = tf.reshape(data['shape_mask'], [self.width, self.height, 1])
-
-        corner_mask = tf.transpose(tf.reshape(data['corner_mask'], [17, self.width, self.height]),
-                                   perm=[1, 2, 0])
-
-        room_types = tf.reshape(data['room_types'], [10])
-
-        wall_count = data['wall_count']
-        door_count = data['door_count']
-        window_count = data['window_count']
-        cooling = data['cooling']
-        heating = data['heating']
-
-        return wall_mask, door_mask, window_mask, entrance_mask, room_mask, corner_mask, shape_mask, room_types, \
-               wall_count, door_count, window_count, cooling, heating
+        return data

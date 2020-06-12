@@ -21,13 +21,23 @@ class GLO(ITrainer):
 
     def _batch_start_call(self, data, step, current_epoch, total_epochs):
 
-        walls, *_ = data
+        walls = data['wall_mask']
         self.lat_var.assign(tf.random.normal([walls.shape[0], self.config.lat.dim]))
 
     @tf.function
     def _train_step(self, step, data):
 
-        walls, doors, windows, _, rooms, _, shape, room_type, wc, dc, wic, cl, ht = data
+        walls = data['wall_mask']
+        doors = data['door_mask']
+        windows = data['window_mask']
+        shape = data['shape_mask']
+        rooms = data['room_mask']
+        room_type = data['room_types']
+
+        dc = tf.expand_dims(data['door_count'], 1)
+        wic = tf.expand_dims(data['window_count'], 1)
+        cl = tf.expand_dims(data['cooling'], 1)
+        ht = tf.expand_dims(data['heating'], 1)
 
         meta_input = tf.concat([room_type, dc, wic, cl, ht], axis=1)
         wdw_target = tf.concat([walls, doors, windows], axis=3)

@@ -140,16 +140,6 @@ def variable_summaries(var, step, prefix):
     tf.summary.histogram(prefix + '_histogram', var, step)
 
 
-def float_feature(value):
-
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
-
-
-def int64_feature(value):
-
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
-
-
 def set_gpu_growth():
 
     gpus = tf.config.experimental.list_physical_devices('GPU')

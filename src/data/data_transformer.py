@@ -3,6 +3,7 @@ from random import shuffle
 
 import h5py
 
+from src.utils.tfrecord import serialize_floor_plan
 from src.utils.utils import *
 
 
@@ -122,27 +123,25 @@ class VectorToImageTransformer:
 
         for index, file_path in enumerate(file_paths):
 
-            walls, wall_types, doors, windows, rooms, icons, cooling, \
-            heating, max_x, max_y, min_x, min_y = self._load_semantics(file_path)
+            data = self._parse_vector_file(file_path)
 
-            if not self._is_valid(rooms, icons):
+            if not self._is_valid(data['rooms'], data['icons']):
                 continue
 
             print('Transforming %d th file, location: %s' % (index, file_path))
 
-            walls, doors, windows, rooms, icons = self._transform_points(walls, doors, windows, rooms, icons,
-                                                                         max_x, max_y, min_x, min_y)
+            self._transform_points(data)
 
-            walls = self._filter_walls(walls, wall_types)
+            data['wall'] = self._filter_walls(data['wall'], data['wall_types'])
 
-            corners, success = self._lines_2_corners(walls, gap=self.config.wall_thickness)
+            corners, success = self._lines_2_corners(data['wall'], gap=self.config.wall_thickness)
 
-            shape_mask = self._get_bounding_mask(walls)
-            wall_mask = self._get_wall_mask(walls)
-            door_mask, window_mask, door_count, window_count = self._get_door_window_mask(windows, doors, shape_mask)
-            room_mask, room_types = self._get_room_mask(walls, rooms, shape_mask)
-            corner_mask = self._get_corner_mask(doors, corners)
-            entrance_mask = self._get_icon_mask(icons)
+            shape_mask = self._get_bounding_mask(data['wall'])
+            wall_mask = self._get_wall_mask(data['wall'])
+            door_mask, window_mask, dc, wc = self._get_door_window_mask(data['window'], data['door'], shape_mask)
+            room_mask, room_types = self._get_room_mask(data['wall'], data['rooms'], shape_mask)
+            corner_mask = self._get_corner_mask(data['door'], corners)
+            entrance_mask = self._get_icon_mask(data['icons'])
 
             masks = {
                 'wall_mask': wall_mask,
@@ -155,16 +154,18 @@ class VectorToImageTransformer:
                 'room_types': room_types
             }
 
-            primitive_sizes = {
-                'wall_count': len(walls),
-                'door_count': door_count,
-                'window_count': window_count
+            meta_data = {
+                'wall_count': len(data['wall']),
+                'door_count': dc,
+                'window_count': wc,
+                'cooling': data['cooling'],
+                'heating': data['heating']
             }
 
             if self.out_format == 'h5':
-                self._store_as_h5(masks, cooling, heating, file_path)
+                self._store_as_h5(masks, meta_data, file_path)
             elif self.out_format == 'tfrecord':
-                self._store_as_tfrecord(masks, primitive_sizes, cooling, heating, file_path)
+                self._store_as_tfrecord(masks, meta_data, file_path)
             elif self.out_format == 'png':
                 self._store_as_png(masks, file_path)
 
@@ -177,36 +178,12 @@ class VectorToImageTransformer:
 
         return os.path.join(dir_3[1], dir_2[1], dir_1[1])
 
-    @staticmethod
-    def _serialize_example_pyfunction(masks, primitive_sizes, cooling, heating):
-
-        feature = {
-            'wall_mask': float_feature(np.reshape(masks['wall_mask'], (-1))),
-            'door_mask': float_feature(np.reshape(masks['door_mask'], (-1))),
-            'window_mask': float_feature(np.reshape(masks['window_mask'], (-1))),
-            'entrance_mask': float_feature(np.reshape(masks['entrance_mask'], (-1))),
-            'room_mask': float_feature(np.reshape(masks['room_mask'], (-1))),
-            'corner_mask': float_feature(np.reshape(masks['corner_mask'], (-1))),
-            'shape_mask': float_feature(np.reshape(masks['shape_mask'], (-1))),
-            'room_types': float_feature(masks['room_types']),
-            'wall_count': float_feature([primitive_sizes['wall_count']]),
-            'door_count': float_feature([primitive_sizes['door_count']]),
-            'window_count': float_feature([primitive_sizes['window_count']]),
-            'cooling': float_feature([cooling]),
-            'heating': float_feature([heating])
-        }
-
-        return tf.train.Example(features=tf.train.Features(feature=feature))
-
-    def _store_as_tfrecord(self, masks, primitive_sizes, cooling, heating, file_path):
-
+    def _store_as_tfrecord(self, masks, meta_data, file_path):
         """
         Stores the data into a tfrecord
 
         :param masks: Dictionary containing all the masks (wall, door, window, room, shape, corner, entrance, room_types
-        :param primitive_sizes: Dictionary containing wall count, door count, window count
-        :param cooling: Value of the cooling parameter
-        :param heating: Value of the heating parameter
+        :param meta_data: Dictionary containing wall count, door count, window count, cooling and heating
         :param file_path: Path to the input vector file which is used to extract the output path
         """
 
@@ -217,12 +194,18 @@ class VectorToImageTransformer:
         out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0] + '.tfrecord')
 
         print('Saving output at %s' % out_file_name)
-
         with tf.io.TFRecordWriter(out_file_name, 'GZIP') as writer:
-            example = self._serialize_example_pyfunction(masks, primitive_sizes, cooling, heating)
-            writer.write(example.SerializeToString())
+            writer.write(serialize_floor_plan(*self._convert_to_tensors(masks, meta_data)))
 
-        writer.close()
+    @staticmethod
+    def _convert_to_tensors(masks, meta_data):
+
+        for key, val in masks.items():
+            masks[key] = tf.convert_to_tensor(val, dtype=tf.float32)
+            if masks[key].shape.ndims == 3:
+                masks[key] = tf.transpose(masks[key], perm=(1, 2, 0))
+
+        return masks, meta_data
 
     def _store_as_png(self, masks, file_path):
 
@@ -246,111 +229,93 @@ class VectorToImageTransformer:
         cv2.imwrite(out_file_prefix + '_corner.png', self._mask_to_segmentation_image(masks['corner_mask']))
         cv2.imwrite(out_file_prefix + '_shape.png', self._mask_to_segmentation_image(masks['shape_mask']))
 
-    def _store_as_h5(self, masks, cooling, heating, file_path):
+    def _store_as_h5(self, masks, meta_data, file_path):
 
         """
         Stores the masks and segmentation images into h5py files
         :param masks: Dictionary containing all the required masks
-        :param cooling: The value of the cooling parameter
-        :param heating: The value of the heating parameter
+        :param meta_data: Dictionary containing all real values like wall count etc.
         :param file_path: Path to the input vector file to extract the output path
         """
         base_dir = os.path.join(self.out_dir, self._get_base_directory(file_path))
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0]+'.h5py')
+        out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0] + '.h5py')
 
         h5f = h5py.File(out_file_name, 'w')
-        h5f.create_dataset('wall_mask', data=masks['wall_mask'])
-        h5f.create_dataset('door_mask', data=masks['door_mask'])
-        h5f.create_dataset('window_mask', data=masks['window_mask'])
-        h5f.create_dataset('entrance_mask', data=masks['entrance_mask'])
-        h5f.create_dataset('room_mask', data=masks['room_mask'])
-        h5f.create_dataset('corner_mask', data=masks['corner_mask'])
-        h5f.create_dataset('shape_mask', data=masks['shape_mask'])
-        h5f.create_dataset('cooling', data=cooling)
-        h5f.create_dataset('heating', data=heating)
+        for key, value in masks.items():
+            h5f.create_dataset(key, data=value)
+            if 'mask' in key:
+                h5f.create_dataset(key.replace('mask', 'seg'), data=value)
 
-        h5f.create_dataset('wall_seg', data=self._mask_to_segmentation_image(masks['wall_mask']))
-        h5f.create_dataset('door_seg', data=self._mask_to_segmentation_image(masks['door_mask']))
-        h5f.create_dataset('window_seg', data=self._mask_to_segmentation_image(masks['window_mask']))
-        h5f.create_dataset('entrance_seg', data=self._mask_to_segmentation_image(masks['entrance_mask']))
-        h5f.create_dataset('room_seg', data=self._mask_to_segmentation_image(masks['room_mask']))
-        h5f.create_dataset('corner_seg', data=self._mask_to_segmentation_image(masks['corner_mask']))
-        h5f.create_dataset('shape_seg', data=self._mask_to_segmentation_image(masks['shape_mask']))
+        for key, value in meta_data.items():
+            h5f.create_dataset(key, data=value)
 
         h5f.close()
 
     def _get_file_paths(self, num_images, shuffle_data):
 
-        file_paths = glob.glob(self.inp_dir + '/*/*/*/*')
-
-        # file_paths = ['../public_datasets/vectors/0c/00/0e55fc740ec0574ecf88f0e3c4a1/0001.txt']
+        if '.txt' in self.inp_dir:
+            file_paths = [self.inp_dir]
+        else:
+            file_paths = glob.glob(self.inp_dir + '/*/*/*/*.txt')
 
         if shuffle_data:
             shuffle(file_paths)
 
         if len(file_paths) > num_images > 0:
-            
             file_paths = file_paths[:num_images]
             return file_paths
 
-        return file_paths            
+        return file_paths
 
-    def _load_semantics(self, file_path):
+    def _parse_vector_file(self, file_path):
 
-        walls = []
-        wall_types = []
-        doors = []
-        windows = []
-        rooms = {}
-        icons = {}
-        cooling = 0
-        heating = 0
+        out = {
+            'wall': [], 'door': [], 'window': [], 'wall_types': [],
+            'rooms': {}, 'icons': {},
+            'cooling': 0, 'heating': 0,
+            'max_x': -sys.maxsize, 'max_y': -sys.maxsize,
+            'min_x': sys.maxsize, 'min_y': sys.maxsize,
+        }
 
         with open(file_path) as vector:
-
-            x, y = [], []
 
             for line in vector:
                 line = line.split('\t')
                 label = line[4].strip()
 
-                if label == 'wall':
-                    walls.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
-                    wall_types.append(int(line[5].strip()) - 1)
+                if label in ['wall', 'door', 'window'] or label in self.config.label_map.keys():
+                    if label in ['wall', 'door', 'window']:
+                        out[label].append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
+                        if label == 'wall':
+                            out['wall_types'].append(int(line[5].strip()) - 1)
+                    elif label in self.config.label_map.keys():
+                        group = self.config.label_map[label][0]
+                        if group == 'rooms':
+                            if label not in out['rooms']:
+                                out['rooms'][label] = []
 
-                    x.append(int(round(float(line[0]))))
-                    x.append(int(round(float(line[2]))))
+                            out['rooms'][label].append(
+                                (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
 
-                    y.append(int(round(float(line[1]))))
-                    y.append(int(round(float(line[3]))))
+                        if group == 'icons':
+                            if label not in out['icons']:
+                                out['icons'][label] = []
 
-                elif label == 'door':
-                    doors.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
-                elif label == 'window':
-                    windows.append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
+                            out['icons'][label].append(
+                                (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
+                    out['max_x'] = max(out['max_x'], int(round(float(line[0]))), int(round(float(line[2]))))
+                    out['max_y'] = max(out['max_y'], int(round(float(line[1]))), int(round(float(line[3]))))
+                    out['min_x'] = min(out['min_x'], int(round(float(line[0]))), int(round(float(line[2]))))
+                    out['min_y'] = min(out['min_y'], int(round(float(line[1]))), int(round(float(line[3]))))
                 elif label == 'cooling':
-                    cooling = float(line[0])
+                    out['cooling'] = float(line[0])
                 elif label == 'heating':
-                    heating = float(line[0])
-                elif label in self.config.label_map.keys():
-                    group = self.config.label_map[label][0]
-                    if group == 'rooms':
-                        if label not in rooms:
-                            rooms[label] = []
+                    out['heating'] = float(line[0])
 
-                        rooms[label].append((convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
-
-                    if group == 'icons':
-                        if label not in icons:
-                            icons[label] = []
-
-                        icons[label].append(
-                            (convert_to_point(line[0], line[1]), convert_to_point(line[2], line[3])))
-
-        return walls, wall_types, doors, windows, rooms, icons, cooling, heating, max(x), max(y), min(x), min(y)
+        return out
 
     @staticmethod
     def _is_valid(rooms, icons):
@@ -361,14 +326,13 @@ class VectorToImageTransformer:
         return True
 
     def _filter_walls(self, walls, wall_types):
-        
+
         invalid_indices = {}
         for wall_index_1, (wall_1, wall_type_1) in enumerate(zip(walls, wall_types)):
             for wall_index_2, (wall_2, wall_type_2) in enumerate(zip(walls, wall_types)):
                 if wall_index_1 in invalid_indices or wall_index_2 in invalid_indices:
                     continue
                 if check_if_walls_touch(wall_1, wall_2, self.config.wall_thickness) and wall_index_1 < wall_index_2:
-
                     walls[wall_index_1] = merge_lines(wall_1, wall_2)
                     invalid_indices[wall_index_2] = True
 
@@ -408,7 +372,7 @@ class VectorToImageTransformer:
 
         # print(fixedValue_1, min_1, max_1, fixedValue_2, min_2, max_2)
         if min(fixed_value_1, max_2) < max(fixed_value_1, min_2) - gap or min(fixed_value_2, max_1) < max(fixed_value_2,
-                                                                                                       min_1) - gap:
+                                                                                                          min_1) - gap:
             return [-1, -1], (0, 0)
 
         if abs(min_1 - fixed_value_2) <= gap:
@@ -455,7 +419,7 @@ class VectorToImageTransformer:
                 indices = [lineIndex_1, lineIndex_2]
                 for c in range(2):
                     # Duplicate corner check
-                    if connections[c] in [0, 1]\
+                    if connections[c] in [0, 1] \
                             and connections[c] in line_connections[indices[c]] \
                             and is_manhattan(line_1) and is_manhattan(line_2):
                         continue
@@ -495,95 +459,39 @@ class VectorToImageTransformer:
         return int(scale_factor * (point[0] + tx_before) + tx_after), \
                int(scale_factor * (point[1] + ty_before) + ty_after)
 
-    def transform_walls(self, walls, max_x, max_y, min_x, min_y):
-        tx_before = -min_x
-        ty_before = -min_y
-
-        sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.90
-
-        tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
-        ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
-
-        return [[self._augment_point(wall[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for wall in walls]
-
-    def _transform_points(self, walls, doors, windows, rooms, icons, max_x, max_y, min_x, min_y):
+    def _transform_points(self, data):
         """
         Scales the points to fit into out_width, out_height
         Translates the points to the center of the output image
-
-        :param max_x: Maximum x value in the given elements
-        :param max_y: Maximum y value in the given elements
-        :param min_x: Minimum x value in the given elements
-        :param min_y: Minimum y value in the given elements
-        :return: Transformed walls, doors, windows, rooms, icons, corners
         """
 
-        tx_before = -min_x
-        ty_before = -min_y
+        min_x, min_y, max_x, max_y = data['min_x'], data['min_y'], data['max_x'], data['max_y']
+
+        tx_b = -min_x
+        ty_b = -min_y
 
         sf = min(self.out_width / (max_y - min_y), self.out_height / (max_x - min_x)) * 0.85
 
-        tx_after = (self.out_height/2 - (max_x-min_x) * sf/2)
-        ty_after = (self.out_width/2 - (max_y-min_y) * sf/2)
+        tx_a = (self.out_height / 2 - (max_x - min_x) * sf / 2)
+        ty_a = (self.out_width / 2 - (max_y - min_y) * sf / 2)
 
-        walls = [[self._augment_point(wall[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for wall in walls]
-        doors = [[self._augment_point(door[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for door in doors]
-        windows = [[self._augment_point(window[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for window in windows]
+        data['wall'] = self._augment_points(data['wall'], sf, tx_b, ty_b, tx_a, ty_a)
+        data['door'] = self._augment_points(data['door'], sf, tx_b, ty_b, tx_a, ty_a)
+        data['window'] = self._augment_points(data['window'], sf, tx_b, ty_b, tx_a, ty_a)
 
-        for label, items in icons.items():
-            icons[label] = [[self._augment_point(item[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for item in items]
-        for label, items in rooms.items():
-            rooms[label] = [[self._augment_point(item[c], sf, tx_before, ty_before, tx_after, ty_after) for c in range(2)] for item in items]
+        for label, items in data['icons'].items():
+            data['icons'][label] = self._augment_points(items, sf, tx_b, ty_b, tx_a, ty_a)
+        for label, items in data['rooms'].items():
+            data['rooms'][label] = self._augment_points(items, sf, tx_b, ty_b, tx_a, ty_a)
 
-        return walls, doors, windows, rooms, icons
+        return data
 
-    def _augment_sample(self, image, background_colors=[], split='train'):
+    def _augment_points(self, lines: list, scale, tx_b, ty_b, tx_a, ty_a):
 
-        max_size = np.random.randint(low=int(self.out_width * 3 / 4), high=self.out_width + 1)
-        if split != 'train':
-            max_size = self.out_width
-            pass
-        image_sizes = np.array(image.shape[:2]).astype(np.float32)
-        transformation = np.zeros((3, 3))
-        transformation[0][0] = transformation[1][1] = float(max_size) / image_sizes.max()
-        transformation[2][2] = 1
-        image_sizes = (image_sizes / image_sizes.max() * max_size).astype(np.int32)
-
-        if image_sizes[1] == self.out_width or split != 'train':
-            offset_x = 0
-        else:
-            offset_x = np.random.randint(self.out_width - image_sizes[1])
-            pass
-        if image_sizes[0] == self.out_height or split != 'train':
-            offset_y = 0
-        else:
-            offset_y = np.random.randint(self.out_height - image_sizes[0])
-            pass
-
-        transformation[0][2] = offset_x
-        transformation[1][2] = offset_y
-
-        if len(background_colors) == 0:
-            full_image = np.full((self.out_height, self.out_width, 3), fill_value=255)
-        else:
-            full_image = background_colors[
-                np.random.choice(np.arange(len(background_colors), dtype=np.int32), self.out_width * self.out_height)].reshape(
-                (self.out_height, self.out_width, 3))
-            pass
-
-        # full_image = np.full((options.height, options.width, 3), fill_value=-1, dtype=np.float32)
-        full_image[offset_y:offset_y + image_sizes[0], offset_x:offset_x + image_sizes[1]] = cv2.resize(image, (image_sizes[1], image_sizes[0]))
-        image = full_image
-
-        if np.random.randint(2) == 0 and split == 'train':
-            image = np.ascontiguousarray(image[:, ::-1])
-            transformation[0][0] *= -1
-            transformation[0][2] = self.out_width - transformation[0][2]
-            pass
-        return image, transformation
+        return [[self._augment_point(window[c], scale, tx_b, ty_b, tx_a, ty_a) for c in range(2)] for window in lines]
 
     def _get_bounding_mask(self, walls):
-        
+
         room_segmentation = np.zeros((self.out_height, self.out_width), dtype=np.uint8)
 
         for line in walls:
@@ -592,7 +500,8 @@ class VectorToImageTransformer:
         # Makes the walls as the background
         rooms = measure.label(room_segmentation == 0, background=0)
         wall_label = rooms.min()
-        for pixel in [(0, 0), (0, self.out_height - 1), (self.out_width - 1, 0), (self.out_width - 1, self.out_height - 1)]:
+        for pixel in [(0, 0), (0, self.out_height - 1), (self.out_width - 1, 0),
+                      (self.out_width - 1, self.out_height - 1)]:
             background_label = rooms[pixel[1]][pixel[0]]
             if background_label != wall_label:
                 break
@@ -713,7 +622,6 @@ class VectorToImageTransformer:
         mask = np.zeros((17, self.out_height, self.out_width), dtype=np.uint8)
 
         for corner in all_corners:
-
             cv2.circle(mask[corner[2]], (corner[0], corner[1]),
                        radius=self.config.corner_thickness, color=1, thickness=-1)
 
