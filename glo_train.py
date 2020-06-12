@@ -1,57 +1,36 @@
 from argparse import ArgumentParser
 
 from src.data.dataset import FloorPlanDataset, FloorPlanDataType
-from src.trainers.glo_trainer import GLOTrainer
-from src.utils.config_parser import Config
+from src.models.generator import Generator
+from src.trainers.glo import GLO
+from src.utils.config import ConfigParser
 from src.utils.utils import set_gpu_growth
 
 set_gpu_growth()
 
-parser = ArgumentParser()
-parser.add_argument('--config', help='Path to the config file. Default file: config/glo_train.yaml',
-                    default='./config/glo_train.yaml')
-args = parser.parse_args()
 
-config = Config(args.config)
+def train_p2p_glo(config_path, params):
 
-# Data configs
-DATA_DIR = config.get_string('data', './datasets/tfrecords')
-WIDTH = config.get_int('width', 256)
-HEIGHT = config.get_int('height', 256)
-LAT_DIM = config.get_int('latent_dimensions', 8)
-META_DIM = config.get_int('meta_data_dimensions', 14)
-GEN_CKPT = config.get_string('gen_ckpt', '')
-CKPT_DIR = config.get_string('ckpt_dir', './checkpoints')
-SUMMARY_DIR = config.get_string('summary_dir', './summaries')
+    config = ConfigParser(config_path, params).config
 
-# Hyper parameters
-EPOCHS = config.get_int('epochs', 2)
-BATCH_SIZE = config.get_int('batch_size', 8)
-NUM_SAMPLES = config.get_int('num_samples', 1000)
-GEN_LR = config.get_float('gen_lr')
-LAT_LR = config.get_float('lat_lr')
-LAT_ITER = config.get_int('latent_iterations', 20)
-GEN_ITER = config.get_int('generator_iterations', 5)
+    floor_plan_dataset = FloorPlanDataset(data_dir=config.data.data_dir,
+                                          width=config.data.width, height=config.data.height,
+                                          data_type=FloorPlanDataType.TFRECORD)
+    train_dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 
-floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
-                                      data_type=FloorPlanDataType.TFRECORD)
+    model = Generator(config.model.input_dim, config.model.output_dim,
+                      config.model.lat_dim, config.model.meta_dim, None,
+                      config.data.width, config.data.height)
+    print(model.summary())
+    gan_trainer = GLO(config.train, model, train_dataset)
 
-dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
+    gan_trainer.train()
 
-gan_trainer = GLOTrainer(dataset, WIDTH, HEIGHT, LAT_DIM, META_DIM,
-                         save_summary=True, summary_dir=SUMMARY_DIR,
-                         save_gen_ckpt=True, ckpt_dir=CKPT_DIR)
 
-gen_config = {
-    'optimizer': 'adam',
-    'lr': GEN_LR
-}
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--config', help='Path to the config file. Default file: config/glo_train.yaml',
+                        default='config/glo_train.yaml')
+    args = parser.parse_args()
 
-lat_config = {
-    'optimizer': 'adam',
-    'lr': LAT_LR
-}
-
-gan_trainer.train(epochs=EPOCHS, batch_size=BATCH_SIZE, num_samples=NUM_SAMPLES,
-                  lat_iter=LAT_ITER, gen_iter=GEN_ITER, shuffle=True,
-                  load_gen_ckpt=GEN_CKPT, gen_config=gen_config, lat_config=lat_config)
+    train_p2p_glo(args.config, None)

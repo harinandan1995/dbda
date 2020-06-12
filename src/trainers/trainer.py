@@ -33,7 +33,8 @@ class ITrainer:
         self.config.update(kwargs)
 
         epoch_loss = tf.metrics.Mean()
-        epoch_bar = tqdm(tf.range(self.total_epochs, dtype=tf.int64), position=0, unit='epoch')
+        epoch_bar = tqdm(tf.range(self.total_epochs, dtype=tf.int64),
+                         position=0, unit='epoch')
         for epoch in epoch_bar:
 
             self._epoch_start_call(epoch, self.total_epochs)
@@ -47,8 +48,8 @@ class ITrainer:
                 loss, out = self._train_step(step, data)
                 epoch_loss.update_state(loss)
 
-                self._update_bar(batch_bar, {'loss': loss.numpy()})
-                self._batch_end_call(loss, out, data, step, epoch, self.total_epochs)
+                self._update_bar(batch_bar, self._batch_end_call(
+                    loss, out, data, step, epoch, self.total_epochs))
 
             batch_bar.close()
 
@@ -58,8 +59,7 @@ class ITrainer:
             if self.config.run_test:
                 self._run_test(epoch)
 
-            epoch_bar.set_postfix({'loss': epoch_loss.result().numpy()})
-            self._epoch_end_call(epoch_loss.result(), epoch, self.total_epochs)
+            epoch_bar.set_postfix(self._epoch_end_call(epoch_loss.result(), epoch, self.total_epochs))
             epoch_loss.reset_states()
 
     @tf.function
@@ -133,14 +133,16 @@ class ITrainer:
     def _epoch_start_call(self, current_epoch, total_epochs):
         return
 
-    def _epoch_end_call(self, mean_loss, current_epoch, total_epochs):
-        return
+    def _epoch_end_call(self, mean_loss, current_epoch, total_epochs) -> dict:
+
+        return {}
 
     def _batch_start_call(self, data, step, current_epoch, total_epochs):
         return
 
-    def _batch_end_call(self, loss, out, data, step, current_epoch, total_epochs):
-        return
+    def _batch_end_call(self, loss, out, data, step, current_epoch, total_epochs) -> dict:
+
+        return {}
 
     def _test_batch_start_call(self, data, step):
         return
@@ -159,6 +161,6 @@ class ITrainer:
         if self.config.num_samples > self.config.batch_size:
             dataset = dataset.take(self.config.num_samples)
 
-        dataset = dataset.batch(self.config.batch_size)
+        dataset = dataset.batch(self.config.batch_size, drop_remainder=True)
 
         return dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)

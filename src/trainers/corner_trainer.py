@@ -34,3 +34,9 @@ class CornerDetectorTrainer(ITrainer):
 
         ckpt_file_name = osp.join(self.checkpoint_dir, "model_%s_%d.h5" % (get_timestamp(), current_epoch))
         self.model.save_weights(ckpt_file_name)
+
+        return {'prev epoch loss': mean_loss.numpy()}
+
+    def _batch_end_call(self, loss, out, data, step, current_epoch, total_epochs) -> dict:
+
+        return {'batch loss': loss.numpy()}

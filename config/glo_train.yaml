@@ -14,20 +14,35 @@
 # summary_dir: Path to the directory where the summaries are stored
 # gen_ckpt: Path to any previous checkpoint to be loaded before training (optional)
 
-{
-  'epochs': 100,
-  'batch_size': 32,
-  'gen_lr': 1e-4,
-  'lat_lr': 6e-2,
-  'latent_iterations': 50,
-  'generator_iterations': 2,
-  'num_samples': -1,
-  'height': 256,
-  'width': 256,
-  'latent_dimensions': 32,
-  'meta_data_dimensions': 14,
-  'data': './datasets/energy/256/tfrecords',
-  'ckpt_dir': './checkpoints',
-  'summary_dir': './summaries',
-  'gen_ckpt': ''
-}
+data:
+  height: 256
+  width: 256
+  data_dir: 'datasets/energy/256/tfrecords'
+
+model:
+  input_dim: 1
+  output_dim: [3, 10]
+  lat_dim: 32
+  meta_dim: 14
+
+train:
+  shuffle: True
+  num_samples: 100
+  batch_size: 16
+  epochs: 30
+  run_test: False
+  lat:
+    iter: 50
+    optim:
+      type: adam
+      lr: 0.06
+      beta1: 0.9
+    dim: 32
+  gen:
+    iter: 2
+    optim:
+      type: adam
+      lr: 0.0004
+      beta1: 0.9
+  out_dir: 'out/'
+  ckpt_path: ''
