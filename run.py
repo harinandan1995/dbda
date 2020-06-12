@@ -3,6 +3,7 @@ import warnings
 
 from src.scripts.glo_train import train_p2p_glo
 from src.scripts.corner_train import train_corners
+from src.scripts.transform import transform_vectors
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config',
@@ -15,6 +16,8 @@ parser.add_argument('-sw', '--show_warnings',
 
 sub_parsers = parser.add_subparsers(help='', dest='mode')
 
+transformer_parser = sub_parsers.add_parser(
+    'transform', help='Use this to transform vectors to trainable data')
 corner_train_parser = sub_parsers.add_parser(
     'corner_train', help='Use this to start training a model to detect corners')
 p2p_glo_train_parser = sub_parsers.add_parser(
@@ -33,6 +36,9 @@ if __name__ == '__main__':
     elif args.mode == 'p2p_glo_train':
         print('Starting the training of a p2p model using glo........')
         train_p2p_glo(args.config, args.__dict__)
+    elif args.mode == 'transform':
+        print('Transforming vectors to data')
+        transform_vectors(args.config, args.__dict__)
     else:
         print('Bye!')
 

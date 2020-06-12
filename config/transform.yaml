@@ -9,16 +9,17 @@
 # height: Height of the output
 # num_output_images: Maximum number of images to be transformed and stored
 
-{
-  'input_dir': '../public_datasets/filtering_v2/test',
-  'output_dir': './datasets/energy/256/tfrecords/test',
-  'output_type': 'tfrecord' ,
-  'width': 256,
-  'height': 256,
-  'num_output_images': 1500,
-  'wall_thickness': 3,
-  'window_thickness': 3,
-  'door_thickness': 3,
-  'corner_thickness': 3,
-  'shuffle': 'True'
-}
+dir:
+  input: '../public_datasets/filtering_v3/energy_vectors'
+  output: 'datasets/energy/tfrecords'
+out:
+  type: 'tfrecord'
+  width: 256
+  height: 256
+  num_samples: 5500
+thickness:
+  wall: 3
+  window: 3
+  door: 3
+  corner: 3
+shuffle: True

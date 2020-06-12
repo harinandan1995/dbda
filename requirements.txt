@@ -9,3 +9,4 @@ scikit-image
 pyyaml
 h5py
 PulP
+tqdm

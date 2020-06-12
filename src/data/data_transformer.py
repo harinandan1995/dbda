@@ -1,8 +1,8 @@
 import glob
-from random import shuffle
-
 import h5py
 
+from tqdm import tqdm
+from random import shuffle
 from src.utils.tfrecord import serialize_floor_plan
 from src.utils.utils import *
 
@@ -121,19 +121,15 @@ class VectorToImageTransformer:
             print('No vector files found in the path. Please check the path')
             exit(1)
 
-        for index, file_path in enumerate(file_paths):
+        for index, file_path in enumerate(tqdm(file_paths)):
 
             data = self._parse_vector_file(file_path)
 
             if not self._is_valid(data['rooms'], data['icons']):
                 continue
 
-            print('Transforming %d th file, location: %s' % (index, file_path))
-
             self._transform_points(data)
-
             data['wall'] = self._filter_walls(data['wall'], data['wall_types'])
-
             corners, success = self._lines_2_corners(data['wall'], gap=self.config.wall_thickness)
 
             shape_mask = self._get_bounding_mask(data['wall'])
@@ -193,7 +189,6 @@ class VectorToImageTransformer:
 
         out_file_name = os.path.join(base_dir, os.path.splitext(os.path.basename(file_path))[0] + '.tfrecord')
 
-        print('Saving output at %s' % out_file_name)
         with tf.io.TFRecordWriter(out_file_name, 'GZIP') as writer:
             writer.write(serialize_floor_plan(*self._convert_to_tensors(masks, meta_data)))
 

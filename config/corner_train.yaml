@@ -12,7 +12,7 @@
 data:
   'height': 256
   'width': 256
-  'data_dir': './datasets/256/tfrecords'
+  'data_dir': 'datasets/energy/tfrecords'
 
 model:
   input_dim: 3
