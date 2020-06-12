@@ -1,7 +1,7 @@
 import argparse
 import warnings
 
-from glo_train import train_p2p_glo
+from src.scripts.glo_train import train_p2p_glo
 from src.scripts.corner_train import train_corners
 
 parser = argparse.ArgumentParser()

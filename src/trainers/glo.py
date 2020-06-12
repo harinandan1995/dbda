@@ -108,6 +108,14 @@ class GLO(ITrainer):
 
         self.lat_epoch_loss.update_state(out['lat_loss'])
 
+        if step.numpy() % 2 == 0:
+            with self.train_sum_writer.as_default():
+                tf.summary.image('{}/tar/wdw'.format(current_epoch), out["wdw_target"],
+                                 step.numpy() % 10, max_outputs=4)
+                tf.summary.image('{}/pred/wdw'.format(current_epoch), out["wdw_gen_out"],
+                                 step.numpy() % 10, max_outputs=4)
+            self.train_sum_writer.flush()
+
         return {
             'lat_loss': out['lat_loss'].numpy(),
             'gen_loss': loss.numpy(),

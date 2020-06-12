@@ -27,7 +27,7 @@ model:
 
 train:
   shuffle: True
-  num_samples: 100
+  num_samples: 4000
   batch_size: 16
   epochs: 30
   run_test: False
