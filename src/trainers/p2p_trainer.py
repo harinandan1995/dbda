@@ -16,14 +16,14 @@ class Pix2PixTrainer:
         self.latent_dim = latent_dim
 
         self.save_summary = save_summary
-        self.summary_dir = os.path.join(summary_dir, get_day(), get_time())
+        self.summary_dir = os.path.join(summary_dir, get_date(), get_time())
 
         if self.save_summary:
             create_directory_if_not_exist(self.summary_dir)
 
         self.save_gen_ckpt = save_gen_ckpt
         self.save_disc_ckpt = save_disc_ckpt
-        self.ckpt_dir = os.path.join(ckpt_dir, get_day(), get_time())
+        self.ckpt_dir = os.path.join(ckpt_dir, get_date(), get_time())
 
         if self.save_gen_ckpt or self.save_disc_ckpt:
             create_directory_if_not_exist(self.ckpt_dir)

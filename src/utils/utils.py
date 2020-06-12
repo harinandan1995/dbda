@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 import time
 import sys
@@ -17,17 +17,24 @@ def create_directory_if_not_exist(path):
         os.makedirs(path)
 
 
-def get_day():
-    return datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')
+def create_dir_if_not_exists(*paths):
+    for path in paths:
+        os.makedirs(path, exist_ok=True)
+
+
+def get_date():
+    today = datetime.now()
+    return today.strftime("%Y%m%d")
 
 
 def get_time():
-    return datetime.datetime.fromtimestamp(time.time()).strftime('%H%M%S')
+    today = datetime.now()
+    return today.strftime("%H%M%S")
 
 
 def get_timestamp():
 
-    return datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
+    return datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
 
 
 def find_axis(pt1, pt2, threshold=1):

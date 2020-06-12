@@ -9,15 +9,24 @@
 # summary_dir: Path to the directory where the summaries are stored
 # model_ckpt: Path to any previous checkpoint to be loaded before training (optional)
 
-{
-  'epochs': 200,
-  'batch_size': 16,
-  'lr': 3e-4,
-  'num_samples': 4000,
-  'height': 256,
-  'width': 256,
-  'data': './datasets/256/tfrecords',
-  'ckpt_dir': './checkpoints',
-  'summary_dir': './summaries',
-  'model_ckpt': ''
-}
+data:
+  'height': 256
+  'width': 256
+  'data_dir': './datasets/256/tfrecords'
+
+model:
+  input_dim: 3
+  output_dim: 17
+
+train:
+  'shuffle': True
+  'num_samples': 100
+  'batch_size': 16
+  'epochs': 30
+  'run_test': False
+  'optim':
+    'type': adam
+    'lr': 0.0003
+    'beta1': 0.9
+  'out_dir': 'out/'
+  'ckpt_path': ''
