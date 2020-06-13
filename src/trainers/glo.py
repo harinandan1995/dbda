@@ -5,6 +5,7 @@ import tensorflow as tf
 from src.models.losses import reconstruction_loss_v2
 from src.trainers.trainer import ITrainer
 from src.utils.config import ConfigParser
+from src.nnutils.transforms import random_translate, random_rotate
 
 
 class GLO(ITrainer):
@@ -52,7 +53,6 @@ class GLO(ITrainer):
             'lat_loss': lat_loss,
             'wdw_gen_out': wdw_gen_out,
             'room_gen_out': room_gen_out,
-            'shape': shape,
             'wdw_target': wdw_target,
             'room_target': rooms
         }
@@ -96,6 +96,14 @@ class GLO(ITrainer):
 
         return generator_loss, wdw_gen_out, room_gen_out
 
+    def _get_augmented_data(self, data):
+
+        data = random_rotate(data, self.config.batch_size)
+        data = random_translate(data, self.config.max_trans_x,
+                                self.config.max_trans_x, self.config.batch_size)
+
+        return data
+
     def _get_optimizer(self):
 
         optim_list = []
@@ -118,18 +126,26 @@ class GLO(ITrainer):
 
         self.lat_epoch_loss.update_state(out['lat_loss'])
 
-        if step.numpy() % 2 == 0:
-            with self.train_sum_writer.as_default():
-                tf.summary.image('{}/tar/wdw'.format(current_epoch), out["wdw_target"],
-                                 step.numpy() % 10, max_outputs=4)
-                tf.summary.image('{}/pred/wdw'.format(current_epoch), out["wdw_gen_out"],
-                                 step.numpy() % 10, max_outputs=4)
-            self.train_sum_writer.flush()
+        self._add_summaries(data, out, step, current_epoch)
 
         return {
             'lat_loss': out['lat_loss'].numpy(),
             'gen_loss': loss.numpy(),
         }
+
+    def _add_summaries(self, data, out, step, current_epoch):
+
+        if step.numpy() % self.config.log.sum_step == 0:
+
+            with self.train_sum_writer.as_default():
+                tf.summary.image('{}/inp/shape'.format(current_epoch), data["shape_mask"],
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+                tf.summary.image('{}/inp/wdw'.format(current_epoch), out["wdw_target"],
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+                tf.summary.image('{}/pred/wdw'.format(current_epoch), out["wdw_gen_out"],
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+
+            self.train_sum_writer.flush()
 
     def _epoch_end_call(self, mean_loss, current_epoch, total_epochs) -> dict:
 

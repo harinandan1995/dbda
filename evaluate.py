@@ -23,8 +23,7 @@ def evaluate(config):
     corner_ckpt = config.get_string('corner_ckpt')
     num_samples = config.get_int('num_samples', 3)
 
-    floor_plan_dataset = FloorPlanDataset(data_dir=data_dir, width=width, height=height,
-                                          data_type=FloorPlanDataType.TFRECORD)
+    floor_plan_dataset = FloorPlanDataset(None, data_type=FloorPlanDataType.TFRECORD)
 
     dataset = floor_plan_dataset.generate_dataset('test', max_samples=num_samples)
 

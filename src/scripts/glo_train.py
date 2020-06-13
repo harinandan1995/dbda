@@ -13,9 +13,7 @@ def train_p2p_glo(config_path, params):
 
     config = ConfigParser(config_path, params).config
 
-    floor_plan_dataset = FloorPlanDataset(data_dir=config.data.data_dir,
-                                          width=config.data.width, height=config.data.height,
-                                          data_type=FloorPlanDataType.TFRECORD)
+    floor_plan_dataset = FloorPlanDataset(config.data, data_type=FloorPlanDataType.TFRECORD)
     train_dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 
     model = Generator(config.model.input_dim, config.model.output_dim,

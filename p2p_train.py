@@ -25,8 +25,7 @@ GEN_LR = config.get_float('gen_lr')
 DISC_LR = config.get_float('disc_lr')
 COEFF = config.get_float('loss_coeff', 5)
 
-floor_plan_dataset = FloorPlanDataset(data_dir=DATA_DIR, width=WIDTH, height=HEIGHT,
-                                      data_type=FloorPlanDataType.TFRECORD)
+floor_plan_dataset = FloorPlanDataset(None, data_type=FloorPlanDataType.TFRECORD)
 
 dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)
 

@@ -39,15 +39,18 @@ class ITrainer:
 
             self._epoch_start_call(epoch, self.total_epochs)
             epoch_bar.set_description('Running {} epoch'.format(epoch))
-
             batch_bar = tqdm(position=1, leave=False)
+
             for step, data in self.train_dataset.enumerate():
+
                 batch_bar.set_description('Training {} batch'.format(step))
                 self._batch_start_call(data, step, epoch, self.total_epochs)
 
+                if self.config.augment:
+                    data = self._get_augmented_data(data)
                 loss, out = self._train_step(step, data)
-                epoch_loss.update_state(loss)
 
+                epoch_loss.update_state(loss)
                 self._update_bar(batch_bar, self._batch_end_call(
                     loss, out, data, step, epoch, self.total_epochs))
 
@@ -164,3 +167,7 @@ class ITrainer:
         dataset = dataset.batch(self.config.batch_size, drop_remainder=True)
 
         return dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+
+    def _get_augmented_data(self, data):
+
+        return
