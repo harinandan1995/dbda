@@ -3,7 +3,7 @@ import h5py
 
 from tqdm import tqdm
 from random import shuffle
-from src.utils.tfrecord import serialize_floor_plan
+from src.nnutils.tfrecord import serialize_floor_plan
 from src.utils.utils import *
 
 

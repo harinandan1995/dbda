@@ -5,7 +5,8 @@ from enum import Enum
 import h5py
 import tensorflow as tf
 
-from src.utils.tfrecord import deserialize_floor_plan
+from src.utils.config import ConfigParser
+from src.nnutils.tfrecord import deserialize_floor_plan
 
 
 class FloorPlanDataType(Enum):
@@ -15,12 +16,11 @@ class FloorPlanDataType(Enum):
 
 class FloorPlanDataset:
 
-    def __init__(self, data_dir, width, height,
-                 data_type=FloorPlanDataType.TFRECORD, num_parallel_reads=2):
+    def __init__(self, config: ConfigParser.ConfigObject,
+                 data_type=FloorPlanDataType.TFRECORD, num_parallel_reads=4):
 
-        self.data_dir = data_dir
-        self.width = width
-        self.height = height
+        self.config = config
+        self.data_dir = config.data_dir
         self.data_type = data_type
         self.num_parallel_reads = num_parallel_reads
 
