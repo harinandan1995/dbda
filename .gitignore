@@ -7,6 +7,7 @@ __pycache__/
 checkpoints/
 summaries/
 out/
+lrz/
 datasets/vectors/*
 # PyCharm files
 .idea/
