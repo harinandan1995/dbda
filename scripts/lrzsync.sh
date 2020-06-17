@@ -1,7 +1,6 @@
-ssh -i "$2" ubuntu@"$1" 'mkdir -p ~/datasets'
 ssh -i "$2" ubuntu@"$1" 'mkdir -p ~/out'
 
-rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=.git --exclude=DeepBIM --exclude=datasets --exclude=summaries --exclude=checkpoints --exclude=out "$3" ubuntu@"$1":~/
+rsync -Pav -e "ssh -i $2" --exclude=env --exclude=.idea --exclude=out "$3" ubuntu@"$1":~/
 rsync -Pav -e "ssh -i $2" "$5" ubuntu@"$1":~/datasets
 
 ssh -i "$2" ubuntu@"$1" "bash ~/building-design-assistant/scripts/lrzconda.sh"

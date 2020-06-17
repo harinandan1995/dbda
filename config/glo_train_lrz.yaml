@@ -1,7 +1,7 @@
 data:
   height: 256
   width: 256
-  data_dir: '/home/ubuntu/datasets/tfrecords'
+  data_dir: 'datasets/energy/tfrecords'
 
 model:
   input_dim: 1
@@ -11,8 +11,8 @@ model:
 
 train:
   augment: True
-  max_trans_x: 10
-  max_trans_y: 10
+  max_trans_x: 1
+  max_trans_y: 1
   shuffle: True
   num_samples: 4000
   batch_size: 32
@@ -21,17 +21,17 @@ train:
   log:
     sum_step: 5
   lat:
-    iter: 50
+    iter: 100
     optim:
       type: adam
       lr: 0.06
       beta1: 0.9
     dim: 32
   gen:
-    iter: 2
+    iter: 10
     optim:
       type: adam
-      lr: 0.0004
+      lr: 0.0001
       beta1: 0.9
-  out_dir: '/home/ubuntu/out/'
-  ckpt_path: ''
+  out_dir: 'out/'
+  ckpt_path: 'out/20200617/174057/checkpoints/20200617_200649_10.h5'
