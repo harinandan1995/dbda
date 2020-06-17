@@ -11,6 +11,7 @@ lrz/
 datasets/vectors/*
 # PyCharm files
 .idea/
+.vscode
 
 # C extensions
 *.so

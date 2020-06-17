@@ -36,8 +36,8 @@ class CornerDetectorTrainer(ITrainer):
 
     def _epoch_end_call(self, mean_loss, current_epoch, total_epochs):
 
-        ckpt_file_name = osp.join(self.checkpoint_dir, "model_%s_%d.h5" % (get_timestamp(), current_epoch))
-        self.model.save_weights(ckpt_file_name)
+        if current_epoch % 5 == 0:
+            self._save_weights(current_epoch)
 
         return {'prev epoch loss': mean_loss.numpy()}
 

@@ -159,4 +159,7 @@ class GLO(ITrainer):
         }
         self.lat_epoch_loss.reset_states()
 
+        if current_epoch % 5 == 0:
+            self._save_weights(current_epoch)
+
         return out
