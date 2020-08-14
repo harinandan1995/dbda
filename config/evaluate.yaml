@@ -1,10 +1,18 @@
-{
-  'height': 256,
-  'width': 256,
-  'num_samples': 30,
-  'latent_dimensions': 64,
-  'meta_dimensions': 12,
-  'data': './datasets/256/tfrecords',
-  'gen_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200118/135342/gen_20200119_005412_54.h5',
-  'corner_ckpt': '/home/harinandan/TUM/sose2019/IDP/lrzsync/checkpoints/20200119/102618/model_20200119_151611_199.h5'
-}
+data:
+  height: 256
+  width: 256
+  data_dir: 'datasets/energy/tfrecords'
+
+model:
+  input_dim: 1
+  output_dim: [3, 10]
+  lat_dim: 32
+  meta_dim: 14
+
+
+test:
+  num_samples: 30
+  #'latent_dimensions': 64
+  #'meta_dimensions': 12
+  gen_ckpt: 'out/20200810/205338/checkpoints/20200814_041804_195.h5'
+  corner_ckpt: 'out/20200814/095456/checkpoints/20200814_105412_195.h5'
