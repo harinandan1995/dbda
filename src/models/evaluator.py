@@ -231,7 +231,7 @@ class FloorPlanGenerator:
         fig = plt.figure(figsize=(rows * 3, columns * 3))
 
         if show_walls:
-            wall_mask = walls#np.squeeze(walls.numpy())
+            wall_mask = np.squeeze(walls.numpy())
             fig.add_subplot(rows, columns, index)
             plt.imshow(wall_mask, cmap='hot', interpolation='nearest')
             index += 1
