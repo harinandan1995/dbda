@@ -38,10 +38,10 @@ def evaluate(config, params):
        #
        # meta_input = tf.concat([room_types, dc, wic, cl, ht], axis=1)
        #
-        meta_input = tf.concat([room_types, door_count, window_count, cooling, heating], axis=1)
+        meta_input = tf.concat([room_types, door_count, window_count, cooling, heating], axis=0)
 
         #walls, doors, windows, rooms, corners, shape,
-        evaluator.reconstruct(wall_mask, door_mask, window_mask, room_mask, d, shape_mask, rt, meta_input, str(index),
+        evaluator.reconstruct(wall_mask, door_mask, window_mask, room_mask, corner_mask, shape_mask, room_types, meta_input, str(index),
                               save=True, show_walls=True, show_doors=True,
                               show_windows=True, show_rooms=True, show_corners=True,
                               show_shape=True, show_reconstructed=True)
