@@ -1,3 +1,5 @@
+import json
+
 from argparse import ArgumentParser
 
 from src.data.dataset import FloorPlanDataset, FloorPlanDataType
@@ -12,6 +14,7 @@ set_gpu_growth()
 def train_p2p_glo(config_path, params):
 
     config = ConfigParser(config_path, params).config
+    print(json.dumps(config, indent=3))
 
     floor_plan_dataset = FloorPlanDataset(config.data, data_type=FloorPlanDataType.TFRECORD)
     train_dataset = floor_plan_dataset.generate_dataset('train', max_samples=-1)

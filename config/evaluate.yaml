@@ -12,7 +12,8 @@ model:
 
 test:
   num_samples: 30
-  #'latent_dimensions': 64
-  #'meta_dimensions': 12
-  gen_ckpt: 'out/20200810/205338/checkpoints/20200814_041804_195.h5'
-  corner_ckpt: 'out/20200814/095456/checkpoints/20200814_105412_195.h5'
+  type: one_to_many
+  num_outputs: 20 # Number of outputs for each shape when one to many is used
+  iterations: 1000 # Number of iterations to be used to reconstruct input data.
+  gen_ckpt: 'out/gen_20200820_071350_160.h5'
+  corner_ckpt: 'out/corner_20200814_105412_195.h5'

@@ -22,7 +22,7 @@ class FloorPlanGenerator:
     """
 
     def __init__(self, dataset, latent_dim, meta_dim, gen_ckpt_path, corner_ckpt_path,
-                 out_dir='./out', width=256, height=256):
+                 iterations=500, out_dir='./out', width=256, height=256):
 
         self.dataset = dataset
         self.width = width
@@ -36,7 +36,7 @@ class FloorPlanGenerator:
         create_directory_if_not_exist(self.out_dir)
 
         self.latent_optimizer = tf.keras.optimizers.Adam(2e-2)
-        self.iterations = 500
+        self.iterations = iterations
         self.generator = Generator(1, [3, 10], self.latent_dim, meta_dim,
                                    gen_ckpt_path, width, height)
         self.corner_detector = CornerDetector(3, 17, corner_ckpt_path)

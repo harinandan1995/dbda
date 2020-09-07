@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
 import tensorflow as tf
+import json
 
 from src.data.dataset import FloorPlanDataset, FloorPlanDataType
 from src.models.evaluator import FloorPlanGenerator
@@ -12,24 +13,19 @@ set_gpu_growth()
 
 
 def evaluate(config, params):
+    
     config = ConfigParser(config, params).config
-    # config = Config(config)
-
-    # lat_dim = config.get_int('latent_dimensions', 32)
-    # meta_dim = config.get_int('meta_dimensions', 14)
-    # gen_ckpt = config.get_string('gen_ckpt')
-    # corner_ckpt = config.get_string('corner_ckpt')
-    # num_samples = config.get_int('num_samples', 3)
-
+    print(json.dumps(config, indent=3))
+    
     floor_plan_dataset = FloorPlanDataset(config.data, data_type=FloorPlanDataType.TFRECORD)
-
     dataset = floor_plan_dataset.generate_dataset('test', max_samples=config.test.num_samples)
 
-    evaluator = FloorPlanGenerator(dataset, config.model.lat_dim, config.model.meta_dim, config.test.gen_ckpt, config.test.corner_ckpt)
+    evaluator = FloorPlanGenerator(dataset, config.model.lat_dim, config.model.meta_dim, config.test.gen_ckpt, config.test.corner_ckpt, config.test.iterations)
 
-    dataset = dataset.batch(1).take(1)
+    dataset = dataset.batch(1)
 
     for step, data in dataset.enumerate():
+        
         dc = tf.expand_dims(data["door_count"], 1)
         wic = tf.expand_dims(data["window_count"], 1)
         cl = tf.expand_dims(data["cooling"], 1)
@@ -38,14 +34,14 @@ def evaluate(config, params):
 
         meta_input = tf.concat([data["room_types"], dc, wic, cl, ht], axis=1)
 
-        evaluator.reconstruct(data["wall_mask"], data["door_mask"], data["window_mask"], data["room_mask"], data["corner_mask"], data["shape_mask"], data["room_types"],
-                              meta_input, str(step),
-                              save=True, show_walls=True, show_doors=True,
-                              show_windows=True, show_rooms=True, show_corners=True,
-                              show_shape=True, show_reconstructed=True)
-
-
-
+        if config.test.type == 'one_to_many':
+            evaluator.get_possible_plans(data["shape_mask"], meta_input, number_of_outputs=config.test.num_outputs)
+        else:
+            evaluator.reconstruct(data["wall_mask"], data["door_mask"], data["window_mask"], data["room_mask"], 
+                                data["corner_mask"], data["shape_mask"], data["room_types"],
+                                meta_input, str(step), save=True, show_walls=True, show_doors=True,
+                                show_windows=True, show_rooms=True, show_corners=True,
+                                show_shape=True, show_reconstructed=True)
 
 
 if __name__ == '__main__':
