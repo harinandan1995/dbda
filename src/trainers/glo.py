@@ -98,9 +98,11 @@ class GLO(ITrainer):
 
     def _get_augmented_data(self, data):
 
-        data = random_rotate(data, self.config.batch_size)
-        data = random_translate(data, self.config.max_trans_x,
-                                self.config.max_trans_x, self.config.batch_size)
+        if self.config.rotate:
+            data = random_rotate(data, self.config.batch_size)
+        if self.config.trans.status:
+            data = random_translate(data, self.config.trans.max_x,
+                                self.config.trans.max_x, self.config.batch_size)
 
         return data
 

@@ -27,8 +27,11 @@ model:
 
 train:
   augment: True
-  max_trans_x: 1
-  max_trans_y: 1
+  trans:
+    status: False
+    max_x: 1
+    max_y: 1
+  rotate: True
   shuffle: True
   num_samples: 4000
   batch_size: 16
