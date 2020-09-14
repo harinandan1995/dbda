@@ -10,23 +10,26 @@
 # model_ckpt: Path to any previous checkpoint to be loaded before training (optional)
 
 data:
-  'height': 256
-  'width': 256
-  'data_dir': 'datasets/energy/tfrecords'
+  height: 256
+  width: 256
+  data_dir: 'datasets/energy/tfrecords'
 
 model:
   input_dim: 3
   output_dim: 17
 
 train:
-  'shuffle': True
-  'num_samples': 100
-  'batch_size': 16
-  'epochs': 30
-  'run_test': False
-  'optim':
-    'type': adam
-    'lr': 0.0003
-    'beta1': 0.9
-  'out_dir': 'out/'
-  'ckpt_path': ''
+  augment: False
+  shuffle: True
+  num_samples: 100
+  batch_size: 16
+  epochs: 100
+  run_test: False
+  log:
+    sum_step: 5
+  optim:
+    type: adam
+    lr: 0.0003
+    beta1: 0.9
+  out_dir: 'out/'
+  ckpt_path: ''

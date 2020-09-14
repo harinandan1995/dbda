@@ -32,7 +32,11 @@ class CornerDetectorTrainer(ITrainer):
 
         loss = get_corner_loss(corners, output, shape, tf.constant(True), tf.constant(True))
 
-        return loss, None
+        out = {
+            'corners': output
+        }
+
+        return loss, out
 
     def _epoch_end_call(self, mean_loss, current_epoch, total_epochs):
 
@@ -43,4 +47,32 @@ class CornerDetectorTrainer(ITrainer):
 
     def _batch_end_call(self, loss, out, data, step, current_epoch, total_epochs) -> dict:
 
+        self._add_summaries(data, out, step, current_epoch)
+
         return {'batch loss': loss.numpy()}
+
+    def _add_summaries(self, data, out, step, current_epoch):
+
+        if step.numpy() % self.config.log.sum_step == 0:
+
+            walls = data['wall_mask']
+            doors = data['door_mask']
+            windows = data['window_mask']
+            wdw = tf.concat([walls, doors, windows], axis=3)
+
+            corners = data['corner_mask']
+            shape = data['shape_mask']
+            pred_corners = out['corners']
+
+            with self.train_sum_writer.as_default():
+                
+                tf.summary.image('{}/inp/shape'.format(current_epoch), shape,
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+                tf.summary.image('{}/inp/wdw'.format(current_epoch), wdw,
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+                tf.summary.image('{}/inp/corners'.format(current_epoch), tf.reduce_max(corners, axis=3, keepdims=True),
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+                tf.summary.image('{}/pred/corners'.format(current_epoch), tf.reduce_max(pred_corners, axis=3, keepdims=True),
+                                 step.numpy() / self.config.log.sum_step, max_outputs=4)
+
+            self.train_sum_writer.flush()
